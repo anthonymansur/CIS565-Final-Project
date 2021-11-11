@@ -154,6 +154,8 @@ void mainLoop()
         glfwSetWindowTitle(window, ss.str().c_str());
 
         // GL commands go here for visualization
+        glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
+        glfwSwapBuffers(window);
     }
     glfwDestroyWindow(window);
     glfwTerminate();
