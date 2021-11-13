@@ -9,6 +9,8 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
+#include "Terrain.h"
+
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 
@@ -23,6 +25,7 @@ int height = 720;
 bool init(int argc, char** argv);
 void mainLoop();
 void runCUDA();
+
 void errorCallback(int error, const char* description);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
@@ -34,7 +37,9 @@ int main(int argc, char* argv[])
 
     if (init(argc, argv))
     {
-        // TODO: implement
+        // Create te terrain on which we will build the trees 
+        Terrain terrain(10, 10);
+        terrain.AddTree(0, 0);
         mainLoop();
         return 0;
     }
