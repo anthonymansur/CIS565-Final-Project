@@ -15,6 +15,8 @@ int Module::AddNode(const TruncatedCone& cone, glm::vec3 pos, glm::vec3 dir)
 	return (int)(branches.size() - 1);
 }
 
+// TODO: Needs to be updated according to 4.2.1 description, which states that an edge contains
+// the length of branch and the radii ratio.
 bool Module::AddEdge(int fromNode, int toNode)
 {
 

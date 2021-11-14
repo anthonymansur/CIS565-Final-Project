@@ -63,18 +63,13 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/physics/kernel.h
-    src/tree/Module.h
-    src/tree/Tree.h
-    src/tree/TruncatedCone.h
     src/Terrain.h
+    src/TerrainStructs.h
     )
 
 set(sources
     src/physics/kernel.cu
     src/main.cpp
-    src/tree/Module.cpp
-    src/tree/Tree.cpp
-    src/tree/TruncatedCone.cpp
     src/Terrain.cpp
     )
 
