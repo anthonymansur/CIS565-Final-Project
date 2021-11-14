@@ -5,6 +5,9 @@ This file will track the progress we make in completing our project. We have fou
 November 7th: Check out our project pitch here: https://docs.google.com/presentation/d/14vtnmmRYquAEECtwGznRRNBs1waKNvSY1llARJxrtKg/
 
 November 9th: Pushed CUDA/OpenGL boilerplate CMake project for us to build on.
+November 12th: Referring to https://storage.googleapis.com/pirk.io/projects/synthetic_silviculture/index.html to start creating the tree geometry data structures
+
+November 13th: Referring to https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.102.4206&rep=rep1&type=pdf for help in representing graphs in the GPU
 
 ## TODOs
 - Boilerplate code is using OpenGL 3.3. May want to figure out a way to move to OpenGL 4.6

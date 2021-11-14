@@ -9,6 +9,7 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
+#include "physics/kernel.h"
 #include "Terrain.h"
 
 // definitions
@@ -20,6 +21,7 @@ std::string deviceName;
 GLFWwindow* window;
 int width = 1280;
 int height = 720;
+
 
 // functions
 bool init(int argc, char** argv);
@@ -37,9 +39,9 @@ int main(int argc, char* argv[])
 
     if (init(argc, argv))
     {
-        // Create te terrain on which we will build the trees 
-        Terrain terrain(10, 10);
-        terrain.AddTree(0, 0);
+        Terrain terrain;
+        // TODO: generate terrain
+        Simulation::initSimulation(&terrain);
         mainLoop();
         return 0;
     }
