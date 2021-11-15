@@ -24,6 +24,11 @@ struct Module
     int previousNode;
     int rootNode; 
 
+    float temperature;
+    float volume;
+    float density;
+    float startingRadius;
+
     glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
 };
 
