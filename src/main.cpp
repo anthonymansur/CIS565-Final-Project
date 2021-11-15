@@ -9,6 +9,8 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
+#include "physics/physics.h"
+
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 
@@ -35,6 +37,7 @@ int main(int argc, char* argv[])
     if (init(argc, argv))
     {
         // TODO: implement
+        Physics* physics = new Physics();
         mainLoop();
         return 0;
     }
