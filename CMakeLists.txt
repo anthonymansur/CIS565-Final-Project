@@ -62,12 +62,20 @@ find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
-    src/physics/kernel.h
+    src/errors.h
+    src/physics/advection.h
+    src/physics/pressure.h
+    src/physics/physics.h
+    src/physics/vec3.h
+
     )
 
 set(sources
-    src/physics/kernel.cu
     src/main.cpp
+    src/physics/advection.cu
+    src/physics/pressure.cu
+    src/physics/physics.cpp
+
     )
 
 list(SORT headers)
