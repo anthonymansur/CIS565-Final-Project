@@ -63,20 +63,30 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/physics/kernel.h
+    src/Camera.h
     )
 
 set(sources
     src/physics/kernel.cu
     src/main.cpp
+    src/Camera.cpp
+    )
+
+set(shaders
+    shaders/compute.comp
+    shaders/graphics.frag
+    shaders/graphics.vert
     )
 
 list(SORT headers)
 list(SORT sources)
+list(SORT shaders)
 
 source_group(Headers FILES ${headers})
 source_group(Sources FILES ${sources})
+source_group(Sources FILES ${shaders})
 
-cuda_add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers})
+cuda_add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers} ${shaders})
 target_link_libraries(${CMAKE_PROJECT_NAME} ${LIBRARIES})
 
 add_custom_command(
