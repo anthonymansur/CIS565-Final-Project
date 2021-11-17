@@ -65,7 +65,7 @@ set(headers
     src/errors.h
     src/physics/advection.h
     src/physics/pressure.h
-    src/physics/physics.h
+    src/physics/kernel.h
     src/physics/vec3.h
 
     )
@@ -74,7 +74,7 @@ set(sources
     src/main.cpp
     src/physics/advection.cu
     src/physics/pressure.cu
-    src/physics/physics.cpp
+    src/physics/kernel.cu
 
     )
 
