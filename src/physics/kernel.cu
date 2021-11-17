@@ -84,7 +84,7 @@ void Simulation::stepSimulation(float dt)
     // update smoke density (qs), water vapor (qv), condensed water (qc),
     // and rain (qc)
     // TODO: implement
-    
+
     // For each module in the forest
     // cull modules (and their children) that have zero mass
     // TODO: implement
