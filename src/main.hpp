@@ -11,6 +11,7 @@
 #include <cuda_gl_interop.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <filesystem>
 #include "utilityCore.hpp"
 #include "glslUtility.hpp"
 #include "physics/kernel.h"
@@ -18,8 +19,9 @@
 // adapted from Boids homework
 
 GLuint positionLocation = 0;
-GLuint texcoordsLocation = 1;
-const char* attributeLocations[] = { "Position", "Texcoords"};
+GLuint colorLocation = 1;
+GLuint texcoordsLocation = 2;
+const char* attributeLocations[] = { "Position", "Color", "Texcoords"};
 
 GLuint PBO;
 GLuint vboID[3];

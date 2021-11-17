@@ -2,7 +2,11 @@
 * @file main.cpp
 **/
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include "main.hpp"
+#include <iostream>
+#include <filesystem>
 
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
@@ -12,7 +16,7 @@ std::string deviceName;
 GLFWwindow* window;
 
 const float DT = 0.2f;
-const int N_FOR_VIS = 1;
+const int N_FOR_VIS = 2;
 
 int main(int argc, char* argv[])
 {
@@ -93,8 +97,8 @@ bool init(int argc, char** argv)
     initShaders(program);
     initVAO();
     initTextures();
-    initCuda();
-    initPBO();
+    //initCuda();
+    //initPBO();
 
     updateCamera();
 
@@ -107,13 +111,9 @@ bool init(int argc, char** argv)
     // register buffer objects here
     
     //cudaGLRegisterBufferObject(vboID[0]);
-   // cudaGLRegisterBufferObject(vboID[1]);
+    //cudaGLRegisterBufferObject(vboID[1]);
 
-    //Simulation::initSimulation(4);
-
-    // camera setup
-    
-    //initShaders(program);
+   // Simulation::initSimulation(1);
 
     // GL enables go here 
    // glEnable(GL_DEPTH_TEST);
@@ -123,19 +123,19 @@ bool init(int argc, char** argv)
 
 void initVAO() {
 
-    //GLfloat vertices[] = {
-    //    0.0f, 1.0f, 0.0f,
-    //    25.0f, 1.0f, 0.0f,
-    //    25.0f, 1.0f, 25.0f,
-    //    0.0f, 1.0f, 25.0f,
-    //};
-
     GLfloat vertices[] = {
-       -1.0f, -1.0f, 0.0f,
-       1.0f, -1.0f, 0.0f,
-       1.0f, 1.0f, 0.0f,
-       -1.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        25.0f, 1.0f, 0.0f,
+        25.0f, 1.0f, 25.0f,
+        0.0f, 1.0f, 25.0f,
     };
+
+    //GLfloat vertices[] = {
+    //   -1.0f, -1.0f, 0.0f,
+    //   1.0f, -1.0f, 0.0f,
+    //   1.0f, 1.0f, 0.0f,
+    //   -1.0f, 1.0f, 0.0f,
+    //};
 
     GLfloat texCoords[] = {
         0.0f, 0.0f,
@@ -202,11 +202,10 @@ void initShaders(GLuint* program) {
     program[PROG] = glslUtility::createProgram(
         "shaders/graphics.vert.glsl",
         /*"shaders/graphics.geom.glsl",*/
-        "shaders/graphics.frag.glsl", attributeLocations, 2);
+        "shaders/graphics.frag.glsl", attributeLocations, 3);
     glUseProgram(program[PROG]);
 
     //glBindVertexArray(VAO);
-
 
     // does this need to be changed?
     if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
@@ -224,12 +223,20 @@ void initTextures() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     
     //try to load image texture
-    GLint size;
-    //char* img = glslUtility::loadFile("textures\tree.jpg", size);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    //GLint size;
+    //char* img = glslUtility::loadFile("textures/tree.jpg", size);
+
+    /*int w, h, c;
+    unsigned char* img = stbi_load("./textures/tree.jpg", &w, &h, &c, 0);
+    if (img) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cout << "Unable to open file " << std::endl;
+    }
     int location = glGetUniformLocation(program[PROG], "ourTex");
-    glUniform1i(location, 0);
+    glUniform1i(location, 0);*/
 }
 
 void initPBO() {
@@ -337,16 +344,16 @@ void mainLoop()
         glfwSetWindowTitle(window, ss.str().c_str());
 
         // GL commands go here for visualization
-        /*glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
         glBindTexture(GL_TEXTURE_2D, displayImage);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);*/
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT/* | GL_DEPTH_BUFFER_BIT*/);
 
         // texture
-       /*glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, displayImage);*/
+       glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, displayImage);
 
         glUseProgram(program[PROG]);
 
