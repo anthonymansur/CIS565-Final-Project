@@ -10,6 +10,7 @@
 #include <cuda_gl_interop.h>
 
 #include "physics/kernel.h"
+#include "Terrain.h"
 
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
@@ -21,10 +22,12 @@ GLFWwindow* window;
 int width = 1280;
 int height = 720;
 
+
 // functions
 bool init(int argc, char** argv);
 void mainLoop();
 void runCUDA();
+
 void errorCallback(int error, const char* description);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
@@ -36,7 +39,9 @@ int main(int argc, char* argv[])
 
     if (init(argc, argv))
     {
-        // TODO: implement
+        Terrain terrain;
+        // TODO: generate terrain
+        Simulation::initSimulation(&terrain);
         mainLoop();
         return 0;
     }
@@ -156,6 +161,8 @@ void mainLoop()
         glfwSetWindowTitle(window, ss.str().c_str());
 
         // GL commands go here for visualization
+        glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
+        glfwSwapBuffers(window);
     }
     glfwDestroyWindow(window);
     glfwTerminate();
