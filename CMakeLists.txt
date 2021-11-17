@@ -64,7 +64,7 @@ include_directories(${GLM_INCLUDE_DIRS})
 set(headers
     src/errors.h
     src/Terrain.h
-    src/TerrainStructs/h
+    src/TerrainStructs.h
 
     src/physics/advection.h
     src/physics/pressure.h
