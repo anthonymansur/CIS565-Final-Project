@@ -9,10 +9,10 @@
 #include "device_launch_parameters.h"
 
 #include "advection.h"
-#include "physics.h"
+#include "kernel.h"
 #include "../errors.h"
 
-void forceIncompressibility(float3 * d_vel, float* d_pressure);
-__global__ void resetPressure(float* d_pressure);
+void forceIncompressibility(int3 gridCount, float blockSize, float3 * d_vel, float* d_pressure);
+__global__ void resetPressure(int3 gridCount, float* d_pressure);
 
 #endif /* PRESSURE_H */

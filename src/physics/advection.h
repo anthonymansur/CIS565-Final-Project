@@ -11,7 +11,7 @@
 #include "../errors.h"
 #include "vec3.h"
 #include "pressure.h"
-#include "physics.h"
+#include "kernel.h"
 
 struct uchar4;
 // struct BC that contains all the boundary conditions
@@ -23,8 +23,8 @@ typedef struct {
 } BC;
 
 int blocksNeeded(int N_i, int M_i);
-__device__ int flatten(int col, int row, int z);
-__device__ int vflatten(int col, int row, int z);
+__device__ int flatten(int3 gridCount, int col, int row, int z);
+__device__ int vflatten(int3 gridCount, int col, int row, int z);
 __device__ int flatten(int col, int row, int z, int width, int height, int depth);
 __device__ unsigned char clip(int n);
 
@@ -33,7 +33,10 @@ __device__ float3 operator-(const float3& a, const float3& b);
 __device__ float3 operator*(const float3& a, const float& b);
 __device__ float3 operator*(const float& b, const float3& a);
 
-void kernelLauncher(uchar4* d_out,
+void kernelLauncher(
+    int3 gridCount,
+    float gridSize,
+    float blockSize,
     float* d_temp,
     float* d_oldtemp,
     float3* d_vel,
@@ -49,7 +52,11 @@ void kernelLauncher(uchar4* d_out,
     int activeBuffer, dim3 Ld, BC bc, dim3 M_in, unsigned int slice);
 
 
-void resetVariables(float* d_temp,
+void resetVariables(
+    int3 gridCount,
+    float gridSize,
+    float blockSize,
+    float* d_temp,
     float* d_oldtemp,
     float3* d_vel,
     float3* d_oldvel,
