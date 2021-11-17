@@ -63,19 +63,25 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/errors.h
+    src/Terrain.h
+    src/TerrainStructs/h
+
     src/physics/advection.h
     src/physics/pressure.h
     src/physics/kernel.h
     src/physics/vec3.h
+    src/physics/module-combustion/module.h
 
     )
 
 set(sources
     src/main.cpp
+    src/Terrain.cpp
+
     src/physics/advection.cu
     src/physics/pressure.cu
     src/physics/kernel.cu
-
+    src/physics/module-combustion/module.cu
     )
 
 list(SORT headers)

@@ -49,7 +49,7 @@ void Simulation::initSimulation(Terrain* terrain)
 * stepSimulation *
 ******************/
 
-__global__ void kernModuleCombustion(float time, int N, Node* nodes, Edge* edges, Module* modules)
+__global__ void kernModuleCombustion(float time, int N, Node* nodes, Edge* edges, Module* modules) 
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
