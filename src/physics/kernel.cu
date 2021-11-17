@@ -22,6 +22,7 @@ dim3 threadsPerBlock(blockSize);
 Node* dev_nodes;
 Edge* dev_edges;
 Module* dev_modules;
+ModuleEdge* dev_moduleEdges;
 
 /******************
 * initSimulation *
@@ -41,7 +42,10 @@ void Simulation::initSimulation(Terrain* terrain)
 
     cudaMalloc((void**)&dev_modules, terrain->modules.size() * sizeof(Module));
     cudaMemcpy(dev_modules, terrain->modules.data(), terrain->modules.size(), cudaMemcpyHostToDevice);
-    
+
+    cudaMalloc((void**)&dev_moduleEdges, terrain->modules.size() * sizeof(ModuleEdge));
+    cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size(), cudaMemcpyHostToDevice);
+
     // TODO: check cuda error
 }
 
@@ -55,7 +59,7 @@ __global__ void kernModuleCombustion(float time, int N, Node* nodes, Edge* edges
     if (index >= N) return;
 
     Module& module = modules[index];
-    Node& rootNode = nodes[module.rootNode];
+    Node& rootNode = nodes[module.startNode];
 
     // TODO: implement
 }

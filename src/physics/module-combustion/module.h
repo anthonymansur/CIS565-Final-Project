@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../TerrainStructs.h"
+
 // device function prototypes
 /**
  * @brief sigmoid-like function that interpolates smoothly from zero to one for
@@ -110,3 +112,47 @@ __device__ float frontArea(float A0, float H0, float H);
  * @return the rate
  */
 __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, float frontArea, float windSpeed);
+
+/**
+ * @brief Derives a constant that will be used during the radii update algorithm
+ * 
+ * @param nodes device pointer to all the nodes in the forest
+ * @param edges device pointer to all the edges in the forest
+ * @param module the current module we are updating the radii for
+ * 
+ * @return the constant, psi_M
+ */
+__device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module);
+
+/**
+ * @brief Gets the new radius of the root branch for given module 
+ * 
+ * @param nodes device pointer to all the nodes in the forest
+ * @param edges device pointer to all the edges in the forest
+ * @param module the current module we are updating the radii for
+ * @param deltaMass the change in mass of the module
+ * 
+ * @return the new radius
+ */
+__device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, float deltaMass);
+
+/**
+ * @brief Gets the new radius of the given branch in the module 
+ * 
+ * @param nodes device pointer to all the nodes in the forest
+ * @param edges device pointer to all the edges in the forest
+ * @param module the current module we are updating the radii for
+ * @param nodeInx the index of the node we are updating the radius for
+ * 
+ * @return the new radius
+ */
+__device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius);
+
+/**
+ * @brief Gets the rate of water change for a module given its change in mass
+ * 
+ * @param changeInMass change in mass of the module 
+ * 
+ * @return the rate
+ */
+__device__ float rateOfWaterChange(float changeInMass);
