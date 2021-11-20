@@ -50,6 +50,10 @@ struct Module
 
     // positional parameters
     glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
+
+    // to be computed during init
+    float startArea; // lateral surface area before combustion
+    float moduleConstant;
 };
 
 struct ModuleEdge

@@ -22,7 +22,7 @@ __device__ float sigmoid(float x);
  *
  * @return the area
  */
-__device__ float area(float r0, float r1, float l);
+__device__ float getArea(float r0, float r1, float l);
 
 /**
  * @brief the volume of the branch
@@ -33,7 +33,7 @@ __device__ float area(float r0, float r1, float l);
  *
  * @return the volume
  */
-__device__ float volume(float r0, float r1, float l);
+__device__ float getVolume(float r0, float r1, float l);
 
 /**
  * @brief wind function used to scale the reaction rate
@@ -96,13 +96,13 @@ __device__ float charLayerInsulation(float H_c);
  * 
  * @return the area, A
  */
-__device__ float frontArea(float A0, float H0, float H);
+__device__ float getFrontArea(float A0, float H0, float H);
 
 /**
  * @brief The rate of mass chass of a given module
  * 
  * @param mass the current mass of the module
- * @param H0 the original depth of the volumetric portion represenbed by a 
+ * @param H0 the original depth of the volumetric portion represented by a 
  * surface element
  * @param A0 the starting surface area of the pyrolyzing front
  * @param temp the temperature of the module
@@ -149,6 +149,19 @@ __device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, f
 __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius);
 
 /**
+ * @brief Gets the rate of change of temperature in the module
+ * 
+ * @param T the temperature of the surrounding air
+ * @param T_M the module's temperature
+ * @param W the water content
+ * @param A_M the surface area of the module
+ * @param V_M the volume of the module
+ * 
+ * @return the new radius
+ */
+__device__ float rateOfTemperatureChange(float T, float T_M, float W, float A_M, float V_M);
+
+/**
  * @brief Gets the rate of water change for a module given its change in mass
  * 
  * @param changeInMass change in mass of the module 
@@ -156,3 +169,24 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
  * @return the rate
  */
 __device__ float rateOfWaterChange(float changeInMass);
+
+/**
+ * @brief Initializes the state of the modules before running the simulation
+ * 
+ * @param N the number of modules
+ * @param nodes device pointer to the nodes
+ * @param edges device pointer to the edges
+ * @param modules device pointer to the modules
+ */
+__global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules);
+
+/**
+ * @brief Runs the module combustion algorithm
+ * 
+ * @param DT delta time
+ * @param N the number of modules
+ * @param nodes device pointer to the nodes
+ * @param edges device pointer to the edges
+ * @param modules device pointer to the modules
+ */
+__global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, Module* modules);
