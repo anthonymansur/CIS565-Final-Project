@@ -12,6 +12,12 @@
 __device__ const float T0 = 150, T1 = 450;
 
 /**
+ * @brief the saturation temperature of watter
+ * @note constant, units: celsius
+ */
+ __device__ const float T_sat = 100;
+
+/**
  * @brief the maximum wind boost
  * @note range: XXX, units: 2 kg s^-1 m^-2
  */
@@ -41,6 +47,18 @@ __device__ const float c_min = 0.5;
 __device__ const float c_r = 150;
 
 /**
+ * @brief the rate of insulation due to charring
+ * @note range: constant, units: 1 Wm^-2 celsius^-1
+ */
+__device__ const float c_bar = 0.1;
+
+/**
+ * @brief Specific heat capacity of a module
+ * @note range: constant, units: 1 kJ celsius^-1 kg
+ */
+__device__ const float c_M = 2.5;
+
+/**
  * @brief density of wood
  * @note units: 1 kg m^-3, deciduous = 660, conifer = 420, shrub = 300
  */
@@ -48,9 +66,15 @@ __device__ const float rho = 500;
 
 /**
  * @brief Temperature diffusion coeff. (wood)
- * @note range: [0.1, 1.0] x 10^-7, units: 1 m^2 s^-1
+ * @note range: XXX, units: 1 m^2 s^-1
  */
- float a = 0.5 * powf(10, -7);
+ float alpha = 0.02; // TODO: first paper had different numbers?
+
+ /**
+ * @brief Temperature diffusion coeff. (module)
+ * @note range: XXX, units: 1 m^2 s^-1
+ */
+ float alpha_M = 0.75;
 
 /**
  * @brief Heat transfer coeff. for dry wood 
@@ -79,12 +103,12 @@ __device__ float sigmoid(float x)
     3 * x * x - 2 * x * x * x;
 }
 
-__device__ float area(float r0, float r1, float l)
+__device__ float getArea(float r0, float r1, float l)
 {
     return (float)M_PI * (r0 + r1) * sqrtf((r0 - r1) * (r0 - r1) + l * l);
 }
 
-__device__ float volume(float r0, float r1, float l)
+__device__ float getVolume(float r0, float r1, float l)
 {
     return (float)(M_PI / 3) * l * (r0 * r0 + r0 * r1 + r1 * r1);
 }
@@ -119,7 +143,7 @@ __device__ float charLayerInsulation(float H_c)
     return c_min + (1 - c_min)*exp(-c_r * H_c);
 }
 
-__device__ float frontArea(float A0, float H0, float H)
+__device__ float getFrontArea(float A0, float H0, float H)
 {
     return A0 * H / H0;
 }
@@ -144,34 +168,18 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
         Edge* edge = &edges[i]; // will be updated
         float l = edge->length;
         float prod;
-        int pathEdge = -1;
         do
         {
             // For every edge in the path of the module's root node to the 
             // edge's from node, traversing first from the edge's from node
             // to the root node, do the following: 
 
-            // find the parent 
-            for (int i = module.startEdge; i <= module.lastEdge; i++)
-            {
-                if (edges[i].toNode == edge->fromNode)
-                {
-                    // if we found the to edge that matches this node, we can then
-                    // find the parent of the node.
-                    pathEdge = i;
-                    break;
-                }
-            }
-            if (pathEdge < 0)
-                return -1; // error in the graph construction
-
             float lambda = edge->radiiRatio;
-
             prod *= (lambda * lambda) * (1 + lambda + lambda * lambda);
 
             // get previous edge if not at the first edge
             if (edge->fromNode != module.startEdge)
-                edge = &edges[pathEdge];
+                edge = &edges[nodes[edge->fromNode].previousEdge];
         } while (edge->fromNode != module.startNode);     
 
         sum += l * prod;
@@ -185,10 +193,10 @@ __device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, f
     return sqrt(3 / (M_PI * rho)) * radiiModuleConstant(nodes, edges, module) * sqrt(module.mass + deltaMass);
 }
 
+// TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius)
 {
     int currNodeInx = nodeInx;
-    int pathEdge = -1;
     Edge* edge; // will be updated
     float prod;
     do
@@ -197,41 +205,128 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
         // edge's from node, traversing first from the edge's from node
         // to the root node, do the following: 
 
+        // TODO: use previous edge instead
         // find the parent 
-        for (int i = module.startEdge; i <= module.lastEdge; i++)
-        {
-            if (edges[i].toNode == currNodeInx)
-            {
-                // if we found the to edge that matches this node, we can then
-                // find the parent of the node.
-                pathEdge = i;
-                break;
-            }
-        }
-        if (pathEdge < 0)
-            return -1; // error in the graph construction
-
-        edge = &edges[pathEdge]; 
+        edge = &edges[nodes[currNodeInx].previousEdge]; 
         prod *= edge->radiiRatio * rootRadius;
 
-        // get previous edge if not at the first edge
-        if (edge->fromNode != module.startEdge)
-            edge = &edges[pathEdge];
+        // update currNode
+        currNodeInx = edge->fromNode;
     } while (edge->fromNode != module.startNode); 
 
     return prod;
 }
 
-__device__ float rateOfTemperatureChange(float T, float T_M, float W)
+// TODO: diffusion of adjacent modules not yet implemented
+__device__ float rateOfTemperatureChange(float T, float T_M, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
 
-    // TODO: implement
-    // Need the laplacian of the module temperature 
-    return -1; 
+    float diffusion = 0; // TODO: implement diffusion. see eq. (30)
+    float temp_diff = b * (T - T_M);
+    float changeOfEnergy = (c_bar * A_M * powf((T_M - T_sat), 3))/(V_M * rho * c_M);
+
+    return diffusion + temp_diff - changeOfEnergy; 
 }
 
 __device__ float rateOfWaterChange(float changeInMass)
 {
     return c_WM * changeInMass;
+}
+
+__global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    Module& module = modules[index];
+    float area;
+    float mass;
+    for (int i = module.startEdge; i <= module.lastEdge; i++)
+    {
+        Edge& edge = edges[i];
+        Node& fromNode = nodes[edge.fromNode];
+        float r0 = fromNode.radius;
+        float r1 = edge.radiiRatio * r0;
+        float l = edge.length;
+        area += getArea(r0, r1, l);
+        float volume = getVolume(r0, r1, l);
+        mass += volume * rho; // mass = density * volume 
+    }
+    module.mass = mass;
+    module.startArea = area;
+    module.moduleConstant = radiiModuleConstant(nodes, edges, module);
+}
+
+__global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, Module* modules) 
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    /** for each module in the forest */
+    Module& module = modules[index];
+    Node& rootNode = nodes[modules->startNode];
+
+    /** 1. update the mass */
+    // calculate the current state of the module
+    float mass = 0;
+    float area = 0;
+    float temp = module.temperature;
+    for (int i = module.startEdge; i <= module.lastEdge; i++)
+    {
+        if (temp < T0)
+            continue; // no combustion is taking place
+        
+        // for every branch in the module
+        Edge& edge = edges[i];
+        Node& fromNode = nodes[edge.fromNode];
+        
+        float r0 = fromNode.radius;
+        float r1 = edge.radiiRatio * r0;
+        float l = edge.length;
+
+        float volume = getVolume(r0, r1, l);
+        mass += volume * rho; // mass = density * volume 
+        area += getArea(r0, r1, l);
+    }
+
+    // compute the change in mass
+    float H0 = rootNode.radius;
+    float A0 = module.startArea;
+    float H = heightOfPyrolyzingFront(H0, A0, mass);
+    float frontArea = getFrontArea(A0, H0, H);
+    float windSpeed = 0; // TODO: implement
+    float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
+    
+    module.mass += deltaM;
+
+    /** Perform radii update */
+    // update the root's radius
+    float rootRadius = radiiUpdateRootNode(nodes, edges, module, deltaM);
+    rootNode.radius = rootRadius;
+
+    for (int i = module.startNode + 1; i <= module.lastNode; i++)
+    {
+        // update the radius of each branch in the module
+        Node& node = nodes[i];
+        float newRadius = radiiUpdateNode(nodes, edges, module, i, rootRadius);
+        node.radius = newRadius;
+    }
+
+    // TODO: sync threads here?
+
+    /** 3. Update temperature */
+    float T = 0; // TODO: get the temperature of the surrounding air
+    float T_M = module.temperature;
+    float W = 0; // TODO: get the water content
+    float A_M = area; 
+    float V_M = module.mass / rho;
+    float deltaT = rateOfTemperatureChange(T, T_M, W, A_M, V_M);
+
+    module.temperature += deltaT;
+
+    /** 4. Update released water content */
+    float deltaW = rateOfWaterChange(deltaM);
+
+    // TODO: use change in water content
 }

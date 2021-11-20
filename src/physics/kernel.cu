@@ -47,22 +47,13 @@ void Simulation::initSimulation(Terrain* terrain)
     cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size(), cudaMemcpyHostToDevice);
 
     // TODO: check cuda error
+
+    kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
 }
 
 /******************
 * stepSimulation *
 ******************/
-
-__global__ void kernModuleCombustion(float time, int N, Node* nodes, Edge* edges, Module* modules) 
-{
-    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (index >= N) return;
-
-    Module& module = modules[index];
-    Node& rootNode = nodes[module.startNode];
-
-    // TODO: implement
-}
 
 void Simulation::stepSimulation(float dt)
 {
