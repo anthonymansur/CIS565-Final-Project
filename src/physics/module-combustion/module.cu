@@ -95,9 +95,9 @@ __device__ const float b_wet = 0.1 * B_DRY;
  */
 __device__ const float c_WM = 0.5362;
 
-/***************************
-* Function implementations *
-****************************/
+/*******************
+* Device Functions *
+********************/
 __device__ float sigmoid(float x)
 {
     3 * x * x - 2 * x * x * x;
@@ -234,6 +234,32 @@ __device__ float rateOfWaterChange(float changeInMass)
     return c_WM * changeInMass;
 }
 
+// NOTE: this is a very basic implementation. May need to be updated.
+__device__ glm::vec3 centerOfMass(Module& module)
+{
+    glm::vec3 center;
+    for (int i = 0; i < 3; i++)
+        center[i] = (module.boundingMax[i] + module.boundingMin[i]) * 0.5f;
+    return center;
+}
+
+// TODO: transfer these function calls to the fluid solver
+__device__ float getMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
+{
+    glm::vec3 center = centerOfMass(module);
+    return (1 - glm::distance(x, center) / dx) * module.mass;
+}
+
+__device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
+{
+    glm::vec3 center = centerOfMass(module);
+    return (1 - glm::distance(x, center) / dx) * module.waterContent;
+}
+
+/**********
+* Kernels *
+***********/
+
 __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -244,6 +270,7 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     float mass;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
+        // for every edge in the module
         Edge& edge = edges[i];
         Node& fromNode = nodes[edge.fromNode];
         float r0 = fromNode.radius;
@@ -253,9 +280,27 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
         float volume = getVolume(r0, r1, l);
         mass += volume * rho; // mass = density * volume 
     }
+
+    glm::vec3 minPos{FLT_MAX}, maxPos{FLT_MIN};
+    for (int i = module.startNode; i <= module.lastNode; i++)
+    {
+        // for every node in the module
+        Node& node = nodes[i];
+        glm::vec3 pos = node.position;
+        for (int j = 0; j < 3; j++)
+        {
+            if (pos[j] < minPos[j])
+                minPos[j] = pos[j];
+            if (pos[j] > maxPos[j])
+                maxPos[j] = pos[j];
+        }
+    }
+
     module.mass = mass;
     module.startArea = area;
     module.moduleConstant = radiiModuleConstant(nodes, edges, module);
+    module.boundingMin = minPos;
+    module.boundingMax = maxPos;
 }
 
 __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, Module* modules) 
@@ -299,6 +344,7 @@ __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, 
     float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
     
     module.mass += deltaM;
+    module.deltaM = deltaM;
 
     /** Perform radii update */
     // update the root's radius
@@ -327,6 +373,5 @@ __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, 
 
     /** 4. Update released water content */
     float deltaW = rateOfWaterChange(deltaM);
-
-    // TODO: use change in water content
+    module.waterContent += deltaW;
 }
