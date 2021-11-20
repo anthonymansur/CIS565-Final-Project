@@ -205,6 +205,16 @@ __device__ float getMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
 __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
 
 /**
+ * @brief Check if module intersects this space
+ * 
+ * @param module
+ * @param pos
+ *
+ * @return true if intersects, false otherwise
+ */
+__device__ float checkModuleIntersection(Module& module, glm::vec3 pos);
+
+/**
  * @brief Initializes the state of the modules before running the simulation
  * 
  * @param N the number of modules
