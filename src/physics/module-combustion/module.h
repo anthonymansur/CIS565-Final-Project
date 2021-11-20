@@ -171,6 +171,40 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float W, float A_M,
 __device__ float rateOfWaterChange(float changeInMass);
 
 /**
+ * @brief Get the center of mass of a module
+ * 
+ * @param module the module
+ *
+ * @return the center of mass
+ */
+__device__ glm::vec3 centerOfMass(Module& module);
+
+// TODO: transfer these function calls to the fluid solver
+/**
+ * @brief Get the mass of a module at a given point in space, assuming this point 
+ * intersects with the module's bounding box.
+ * 
+ * @param module the module
+ * @param x the point in space
+ * @param dx delta x
+ *
+ * @return the mass
+ */
+__device__ float getMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
+
+/**
+ * @brief Get the water content of a module at a given point in space, assuming this point 
+ * intersects with the module's bounding box.
+ * 
+ * @param module the module
+ * @param x the point in space
+ * @param dx delta x
+ *
+ * @return the water content
+ */
+__device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
+
+/**
  * @brief Initializes the state of the modules before running the simulation
  * 
  * @param N the number of modules

@@ -15,7 +15,7 @@
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 
-#define DT 0.02
+#define DT 0.016 // in seconds
 
 // variables
 const char* projectName;

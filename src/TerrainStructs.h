@@ -43,17 +43,11 @@ struct Module
 
     // module-level parameters
     float temperature;
-    float volume; // TODO: need to define device functions and kernel prototypes 
-    float density;
-    float startingRadius;
-    float mass; 
-
-    // positional parameters
+    float mass, deltaM; 
     glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
-
-    // to be computed during init
     float startArea; // lateral surface area before combustion
     float moduleConstant;
+    float waterContent;
 };
 
 struct ModuleEdge
