@@ -256,6 +256,20 @@ __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
     return (1 - glm::distance(x, center) / dx) * module.waterContent;
 }
 
+__device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
+{
+    bool intersects = true;
+    for (int i = 0; i < 3; i++)
+    {
+        if (pos[i] < module.boundingMin[i] || pos[i] > module.boundingMax[i])
+        {
+            intersects = false;
+            break;
+        }
+    }
+    return intersects;
+}
+
 /**********
 * Kernels *
 ***********/
