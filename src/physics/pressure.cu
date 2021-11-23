@@ -122,6 +122,7 @@ __global__ void jacobiIterations(int3 gridCount, float blockSize, float * d_pres
     //    printf("%f\n", d_pressure[k]);
     //}
 }
+
 __global__ void resetPressure(int3 gridCount, float* d_pressure){
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -130,6 +131,7 @@ __global__ void resetPressure(int3 gridCount, float* d_pressure){
     const int k = pflatten(gridCount, k_x, k_y, k_z);
     d_pressure[k] = 0;
 }
+
 __global__ void substractPressureGradient(int3 gridCount, float blockSize, float3 * d_vel, float* d_pressure){
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -142,6 +144,7 @@ __global__ void substractPressureGradient(int3 gridCount, float blockSize, float
     d_vel[k].y -= DELTA_T *  (d_pressure[pflatten(gridCount, k_x,k_y+1,k_z)] - d_pressure[kcentered]) / blockSize;
     d_vel[k].z -= DELTA_T *  (d_pressure[pflatten(gridCount, k_x,k_y,k_z+1)] - d_pressure[kcentered]) / blockSize;
 }
+
 void forceIncompressibility(int3 gridCount, float blockSize, float3 * d_vel, float* d_pressure){
     // TODO: CHOLESKI PREPROCESS
     const int NFLAT = gridCount.x * gridCount.y * gridCount.z;

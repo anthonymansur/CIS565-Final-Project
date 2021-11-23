@@ -1,8 +1,4 @@
-#include <cuda.h>
-#define _USE_MATH_DEFINES // Keep above math.h import
-#include <math.h> 
 #include "kernel.h"
-#include "module-combustion/module.h"
 
 /*****************
 * Configuration *
@@ -22,6 +18,8 @@ dim3 threadsPerBlock(blockSize);
 Node* dev_nodes;
 Edge* dev_edges;
 Module* dev_modules;
+float3* dev_temp;
+float3* dev_old_temp;
 
 /******************
 * initSimulation *
@@ -41,6 +39,8 @@ void Simulation::initSimulation(Terrain* terrain)
 
     cudaMalloc((void**)&dev_modules, terrain->modules.size() * sizeof(Module));
     cudaMemcpy(dev_modules, terrain->modules.data(), terrain->modules.size(), cudaMemcpyHostToDevice);
+
+
 
     // TODO: check cuda error
 }
