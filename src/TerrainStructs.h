@@ -31,7 +31,7 @@ struct Edge
 
 struct Module
 {
-    int previousNode; // terminal nodeof previous module
+    int previousNode; // terminal node of previous module
 
     int startNode; // root node of module
     int lastNode; // the last node in the module's graph
