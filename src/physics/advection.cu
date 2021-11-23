@@ -81,7 +81,7 @@ __global__ void resetKernelVelocity(int3 gridCount, float3* d_vel, float3* d_old
 }
 
 
-__device__ float3 getAlpham(int3 gridCount, float gridSize, float blockSize, float3* d_vel, float3 pos, int k) {
+__device__ float3 getAlpham(int3 gridCount, float3 gridSize, float blockSize, float3* d_vel, float3 pos, int k) {
     // Iteratively compute alpha_m
     float3 alpha_m = d_vel[k] * DELTA_T;
     for (unsigned int i = 0; i < SEMILAGRANGIAN_ITERS; i++) {
@@ -89,9 +89,9 @@ __device__ float3 getAlpham(int3 gridCount, float gridSize, float blockSize, flo
         if (estimated.x < blockSize) estimated.x = blockSize;
         if (estimated.y < blockSize) estimated.y = blockSize;
         if (estimated.z < blockSize) estimated.z = blockSize;
-        if (estimated.x > gridSize - blockSize) estimated.x = gridSize - blockSize;
-        if (estimated.y > gridSize - blockSize) estimated.y = gridSize - blockSize;
-        if (estimated.z > gridSize - blockSize) estimated.z = gridSize - blockSize;
+        if (estimated.x > gridSize.x - blockSize) estimated.x = gridSize.x - blockSize;
+        if (estimated.y > gridSize.y - blockSize) estimated.y = gridSize.y - blockSize;
+        if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
         uint3 b = { static_cast<unsigned int>(estimated.x / blockSize),
                    static_cast<unsigned int>(estimated.y / blockSize),
                    static_cast<unsigned int>(estimated.z / blockSize) };
@@ -184,7 +184,7 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
     }
 }
 
-__global__ void velocityKernel(int3 gridCount, float gridSize, float blockSize, float* d_temp, float3* d_vel, 
+__global__ void velocityKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, 
     float3* d_oldvel, float3* d_alpha_m, float* d_smokedensity, float3* d_vorticity, float3 externalForce) {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -219,9 +219,9 @@ __global__ void velocityKernel(int3 gridCount, float gridSize, float blockSize, 
     if (estimated.x < blockSize) estimated.x = blockSize;
     if (estimated.y < blockSize) estimated.y = blockSize;
     if (estimated.z < blockSize) estimated.z = blockSize;
-    if (estimated.x > gridSize - blockSize) estimated.x = gridSize - blockSize;
-    if (estimated.y > gridSize - blockSize) estimated.y = gridSize - blockSize;
-    if (estimated.z > gridSize - blockSize) estimated.z = gridSize - blockSize;
+    if (estimated.x > gridSize.x - blockSize) estimated.x = gridSize.x - blockSize;
+    if (estimated.y > gridSize.y - blockSize) estimated.y = gridSize.y - blockSize;
+    if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
 
     int3 b = { static_cast<int>(estimated.x / blockSize),
                static_cast<int>(estimated.y / blockSize),
@@ -282,7 +282,7 @@ __device__ float laplacian(int3 gridCount, float blockSize, float* field, float 
     out /= blockSize * blockSize;
     return out;
 }
-__global__ void tempAdvectionKernel(int3 gridCount, float gridSize, float blockSize, float* d_temp, float* d_oldtemp, 
+__global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float* d_oldtemp, 
     float3* d_vel, float3* d_alpha_m, float* lap) {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -302,9 +302,9 @@ __global__ void tempAdvectionKernel(int3 gridCount, float gridSize, float blockS
     if (estimated.x < blockSize) estimated.x = blockSize;
     if (estimated.y < blockSize) estimated.y = blockSize;
     if (estimated.z < blockSize) estimated.z = blockSize;
-    if (estimated.x > gridSize - blockSize) estimated.x = gridSize - blockSize;
-    if (estimated.y > gridSize - blockSize) estimated.y = gridSize - blockSize;
-    if (estimated.z > gridSize - blockSize) estimated.z = gridSize - blockSize;
+    if (estimated.x > gridSize.x - blockSize) estimated.x = gridSize.x - blockSize;
+    if (estimated.y > gridSize.y - blockSize) estimated.y = gridSize.y - blockSize;
+    if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
 
     float dt = scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT);
     estimated = pos - alpha_m;
@@ -313,9 +313,9 @@ __global__ void tempAdvectionKernel(int3 gridCount, float gridSize, float blockS
     if (estimated.x < blockSize) estimated.x = blockSize;
     if (estimated.y < blockSize) estimated.y = blockSize;
     if (estimated.z < blockSize) estimated.z = blockSize;
-    if (estimated.x > gridSize - blockSize) estimated.x = gridSize - blockSize;
-    if (estimated.y > gridSize - blockSize) estimated.y = gridSize - blockSize;
-    if (estimated.z > gridSize - blockSize) estimated.z = gridSize - blockSize;
+    if (estimated.x > gridSize.x - blockSize) estimated.x = gridSize.x - blockSize;
+    if (estimated.y > gridSize.y - blockSize) estimated.y = gridSize.y - blockSize;
+    if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
 
     float dtR = TEMPERATURE_GAMMA * powf(scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT) - T_AMBIANT, 4);
     lap[k] = laplacian(gridCount, blockSize, d_oldtemp, T_AMBIANT, k_x, k_y, k_z);
@@ -326,9 +326,42 @@ __global__ void tempAdvectionKernel(int3 gridCount, float gridSize, float blockS
     d_temp[k] = dt + dtR * 2 * DELTA_T;
 }
 
+__global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 
+    float* d_smoke, float* d_oldsmoke, float* d_delta_m) {
+
+    const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
+    const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
+    const int k_z = threadIdx.z + blockDim.z * blockIdx.z;
+    if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
+    const int k = flatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
+    // Advection
+    float3 pos = make_float3((k_x + 0.5f) * blockSize, (k_y + 0.5f) * blockSize, (k_z + 0.5f) * blockSize);
+    float3 alpha_m = d_alpha_m[k];
+
+    // Backtracing 
+    float3 estimated = pos - 2 * alpha_m;
+
+    //Clip on boundaries faces
+    if (estimated.x < blockSize) estimated.x = blockSize;
+    if (estimated.y < blockSize) estimated.y = blockSize;
+    if (estimated.z < blockSize) estimated.z = blockSize;
+    if (estimated.x > gridSize.x - blockSize) estimated.x = gridSize.x - blockSize;
+    if (estimated.y > gridSize.y - blockSize) estimated.y = gridSize.y - blockSize;
+    if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
+
+    // Contribution to smoke density due to advection of fluid
+    float ds = scalarLinearInt(gridCount, blockSize, d_oldsmoke, estimated, 0.f);
+
+    // Contribution to smoke density due to mass loss and evaporation
+    ds += (SMOKE_MASS * d_delta_m[k]) + (EVAP * SMOKE_WATER * d_delta_m[k]);
+
+    __syncthreads();
+    d_smoke[k] = ds;
+}
+
 void kernelLauncher(
     int3 gridCount,
-    float gridSize,
+    float3 gridSize,
     float blockSize,
     float* d_temp,
     float* d_oldtemp,
@@ -340,6 +373,7 @@ void kernelLauncher(
     float* d_smokedensity,
     float* d_oldsmokedensity,
     float* d_smokeRadiance,
+    float* d_deltaM,
     float3 externalForce,
     bool sourcesEnabled,
     int activeBuffer, dim3 Ld, BC bc, dim3 M_in, unsigned int slice) {
@@ -364,6 +398,8 @@ void kernelLauncher(
     tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_temp, d_oldtemp, d_vel, d_alpha_m, d_lap);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
+    smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_oldtemp, d_vel, d_alpha_m, d_smokedensity, d_oldsmokedensity, d_deltaM);
+
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());
 
@@ -373,7 +409,7 @@ void kernelLauncher(
 
 void resetVariables(
     int3 gridCount,
-    float gridSize,
+    float3 gridSize,
     float blockSize,
     float* d_temp,
     float* d_oldtemp,
