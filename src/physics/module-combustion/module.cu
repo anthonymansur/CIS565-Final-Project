@@ -178,7 +178,7 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
             prod *= (lambda * lambda) * (1 + lambda + lambda * lambda);
 
             // get previous edge if not at the first edge
-            if (edge->fromNode != module.startEdge)
+            if (edge->fromNode != module.startNode)
                 edge = &edges[nodes[edge->fromNode].previousEdge];
         } while (edge->fromNode != module.startNode);     
 

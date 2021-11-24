@@ -18,7 +18,7 @@ Tree::~Tree()
 
 #define RADIUS_REDUCTION 0.9
 
-void addNode(Terrain* terrain, float length, glm::vec3 dir, int parentInx, int childInx)
+void addNode(Terrain* terrain, float length, glm::vec3 dir, int childInx, int parentInx)
 {
     terrain->nodes[childInx].position = terrain->nodes[parentInx].position + (length * dir);
     terrain->nodes[childInx].radius = terrain->nodes[parentInx].radius * (RADIUS_REDUCTION / length);
@@ -26,7 +26,7 @@ void addNode(Terrain* terrain, float length, glm::vec3 dir, int parentInx, int c
 
 void addEdge(Terrain* terrain, int edge, int fromNode, int toNode)
 {
-    terrain->edges[edge].fromNode = -1;
+    terrain->edges[edge].fromNode = fromNode;
     terrain->edges[edge].toNode = toNode;
     terrain->edges[edge].length = 
         glm::distance(terrain->nodes[fromNode].position, terrain->nodes[toNode].position);
