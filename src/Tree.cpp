@@ -94,16 +94,19 @@ void Tree::AddTree1(Terrain* terrain, glm::vec3 rootPos, float rootRadius)
     terrain->moduleEdges.push_back(moduleEdge);
     moduleEdge.moduleInx = startModuleInx + 2; // module 2
     terrain->moduleEdges.push_back(moduleEdge);
+    terrain->modules[startModuleInx].endModule = startModuleInx + 2;
 
     // - module 1's adjacency list
     terrain->modules[startModuleInx + 1].startModule = startModuleEdgesInx + 2;
     moduleEdge.moduleInx = startModuleInx;
     terrain->moduleEdges.push_back(moduleEdge); // module 0
+    terrain->modules[startModuleInx + 1].endModule = startModuleEdgesInx + 2;
 
     // - module 2's adjacency list
     terrain->modules[startModuleInx + 2].startModule = startModuleEdgesInx + 3;
     moduleEdge.moduleInx = startModuleInx;
     terrain->moduleEdges.push_back(moduleEdge); // module 0
+    terrain->modules[startModuleInx + 2].endModule = startModuleEdgesInx + 3;
 
     // Fill in node information
     const float BASE_RANDOM = 0.1;
