@@ -3,6 +3,7 @@
 #include <math.h> 
 #include "kernel.h"
 #include "module-combustion/module.h"
+#include "../errors.h" // TODO: move file to different location
 
 /*****************
 * Configuration *
@@ -34,21 +35,27 @@ void Simulation::initSimulation(Terrain* terrain)
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
     // Allocate buffers for the modules
-    cudaMalloc((void**)&dev_nodes, terrain->nodes.size() * sizeof(Node));
-    cudaMemcpy(dev_nodes, terrain->nodes.data(), terrain->nodes.size(), cudaMemcpyHostToDevice);
+    HANDLE_ERROR(cudaMalloc((void**)&dev_nodes, terrain->nodes.size() * sizeof(Node)));
+    HANDLE_ERROR(cudaMemcpy(dev_nodes, terrain->nodes.data(), terrain->nodes.size(), cudaMemcpyHostToDevice));
 
-    cudaMalloc((void**)&dev_edges, terrain->edges.size() * sizeof(Edge));
-    cudaMemcpy(dev_edges, terrain->edges.data(), terrain->edges.size(), cudaMemcpyHostToDevice);
+    HANDLE_ERROR(cudaMalloc((void**)&dev_edges, terrain->edges.size() * sizeof(Edge)));
+    HANDLE_ERROR(cudaMemcpy(dev_edges, terrain->edges.data(), terrain->edges.size(), cudaMemcpyHostToDevice));
 
-    cudaMalloc((void**)&dev_modules, terrain->modules.size() * sizeof(Module));
-    cudaMemcpy(dev_modules, terrain->modules.data(), terrain->modules.size(), cudaMemcpyHostToDevice);
+    HANDLE_ERROR(cudaMalloc((void**)&dev_modules, terrain->modules.size() * sizeof(Module)));
+    HANDLE_ERROR(cudaMemcpy(dev_modules, terrain->modules.data(), terrain->modules.size(), cudaMemcpyHostToDevice));
 
-    cudaMalloc((void**)&dev_moduleEdges, terrain->modules.size() * sizeof(ModuleEdge));
-    cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size(), cudaMemcpyHostToDevice);
+    HANDLE_ERROR(cudaMalloc((void**)&dev_moduleEdges, terrain->modules.size() * sizeof(ModuleEdge)));
+    HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size(), cudaMemcpyHostToDevice));
 
     // TODO: check cuda error
 
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
+
+    // Send back to host to check
+    HANDLE_ERROR(cudaMemcpy(terrain->nodes.data(), dev_nodes, terrain->nodes.size(), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->edges.data(), dev_edges, terrain->edges.size(), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->modules.data(), dev_modules, terrain->modules.size(), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->moduleEdges.data(), dev_moduleEdges, terrain->moduleEdges.size(), cudaMemcpyDeviceToHost));
 }
 
 /******************
