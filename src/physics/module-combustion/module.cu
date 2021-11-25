@@ -392,3 +392,29 @@ __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, 
     float deltaW = rateOfWaterChange(deltaM);
     module.waterContent += deltaW;
 }
+
+
+__device__ int m_idxClip(int idx, int idxMax) {
+    return idx > (idxMax - 1) ? (idxMax - 1) : (idx < 0 ? 0 : idx);
+}
+__device__ int m_flatten(int col, int row, int z, int width, int height, int depth) {
+    return m_idxClip(col, width) + m_idxClip(row, height) * width + m_idxClip(z, depth) * width * height;
+}
+__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass)
+{
+    const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
+    const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
+    const int k_z = threadIdx.z + blockDim.z * blockIdx.z;
+    if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
+    const int k = m_flatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
+
+    float3 pos = make_float3((k_x + 0.5f) * blockSize, (k_y + 0.5f) * blockSize, (k_z + 0.5f) * blockSize);
+
+    float deltaM = 0;
+    for (int i = 0; i < numOfModules; i++)
+    {
+        if (checkModuleIntersection(modules[i], glm::vec3(pos.x, pos.y, pos.z)))
+            deltaM += getMassOfModuleAtPoint(modules[i], glm::vec3(pos.x, pos.y, pos.z), blockSize);
+    }
+    gridOfMass[k] = deltaM;
+}

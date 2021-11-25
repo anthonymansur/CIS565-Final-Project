@@ -37,6 +37,7 @@ float* dev_smokedensity;
 float* dev_oldsmokedensity;
 float* dev_deltaM;
 
+Terrain* m_terrain;
 
 /******************
 * initSimulation *
@@ -44,6 +45,7 @@ float* dev_deltaM;
 
 void Simulation::initSimulation(Terrain* terrain)
 {
+    m_terrain = terrain;
     numOfModules = terrain->modules.size();
     int numOfGrids = gridCount.x * gridCount.y * gridCount.z;
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
@@ -92,9 +94,9 @@ void Simulation::initSimulation(Terrain* terrain)
     cudaMalloc((void**)&dev_deltaM, numOfGrids * sizeof(float));
     cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float));
 
-    cudaDeviceSynchronize(); // TODO: is this needed?
-
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
+
+    cudaDeviceSynchronize();
 }
 
 /******************
@@ -115,6 +117,10 @@ void Simulation::stepSimulation(float dt)
     // For each grid point x in grid space
     // - update mass and water content
     // TODO: implement
+    const dim3 M_in(M_IX, M_IY, M_IZ);
+    const dim3 gridDim(blocksNeeded(gridCount.x, M_IX), blocksNeeded(gridCount.y, M_IY), blocksNeeded(gridCount.z, M_IZ));
+    
+    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, blockSize, dev_modules, dev_deltaM);
 
     // Update air temperature
     // update drag forces (wind)
@@ -123,9 +129,6 @@ void Simulation::stepSimulation(float dt)
     float* dev_lap;
     float3* dev_alpha_m;
     float3 externalForce = { 0.f, 0.f, 0.f };
-
-    const dim3 M_in(M_IX, M_IY, M_IZ);
-    const dim3 gridDim(blocksNeeded(gridCount.x, M_IX), blocksNeeded(gridCount.y, M_IY), blocksNeeded(gridCount.z, M_IZ));
 
     HANDLE_ERROR(cudaMalloc(&dev_lap, gridCount.x * gridCount.y * gridCount.z * sizeof(float)));
     HANDLE_ERROR(cudaMalloc(&dev_alpha_m, gridCount.x * gridCount.y * gridCount.z * sizeof(float3)));
@@ -154,6 +157,8 @@ void Simulation::stepSimulation(float dt)
     // For each module in the forest
     // cull modules (and their children) that have zero mass
     // TODO: implement
+
+    cudaDeviceSynchronize();
 }
 
 /******************
@@ -162,14 +167,14 @@ void Simulation::stepSimulation(float dt)
 void Simulation::endSimulation()
 {
     // Send back to host to check
-    HANDLE_ERROR(cudaMemcpy(terrain->nodes.data(), dev_nodes, terrain->nodes.size() * sizeof(Node), cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(terrain->edges.data(), dev_edges, terrain->edges.size() * sizeof(Edge), cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(terrain->modules.data(), dev_modules, terrain->modules.size() * sizeof(Module), cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(terrain->moduleEdges.data(), dev_moduleEdges, terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyDeviceToHost));
-
-    cudaDeviceSynchronize(); // TODO: is this needed?
+    HANDLE_ERROR(cudaMemcpy(m_terrain->nodes.data(), dev_nodes, m_terrain->nodes.size() * sizeof(Node), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(m_terrain->edges.data(), dev_edges, m_terrain->edges.size() * sizeof(Edge), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(m_terrain->modules.data(), dev_modules, m_terrain->modules.size() * sizeof(Module), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(m_terrain->moduleEdges.data(), dev_moduleEdges, m_terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyDeviceToHost));
 
     cudaFree(dev_modules);
     cudaFree(dev_edges);
     cudaFree(dev_nodes);
+
+    cudaDeviceSynchronize();
 }
