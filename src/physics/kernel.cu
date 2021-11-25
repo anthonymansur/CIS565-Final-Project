@@ -144,7 +144,7 @@ void Simulation::stepSimulation(float dt)
     // Pressure Solve
     forceIncompressibility(gridCount, blockSize, dev_vel, dev_pressure);
 
-    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap);
+    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
