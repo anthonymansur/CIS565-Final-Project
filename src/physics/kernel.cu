@@ -95,14 +95,6 @@ void Simulation::initSimulation(Terrain* terrain)
     cudaDeviceSynchronize(); // TODO: is this needed?
 
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
-
-    // Send back to host to check
-    HANDLE_ERROR(cudaMemcpy(terrain->nodes.data(), dev_nodes, terrain->nodes.size() * sizeof(Node), cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(terrain->edges.data(), dev_edges, terrain->edges.size() * sizeof(Edge), cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(terrain->modules.data(), dev_modules, terrain->modules.size() * sizeof(Module), cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(terrain->moduleEdges.data(), dev_moduleEdges, terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyDeviceToHost));
-
-    cudaDeviceSynchronize(); // TODO: is this needed?
 }
 
 /******************
@@ -169,6 +161,14 @@ void Simulation::stepSimulation(float dt)
 ******************/
 void Simulation::endSimulation()
 {
+    // Send back to host to check
+    HANDLE_ERROR(cudaMemcpy(terrain->nodes.data(), dev_nodes, terrain->nodes.size() * sizeof(Node), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->edges.data(), dev_edges, terrain->edges.size() * sizeof(Edge), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->modules.data(), dev_modules, terrain->modules.size() * sizeof(Module), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->moduleEdges.data(), dev_moduleEdges, terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyDeviceToHost));
+
+    cudaDeviceSynchronize(); // TODO: is this needed?
+
     cudaFree(dev_modules);
     cudaFree(dev_edges);
     cudaFree(dev_nodes);
