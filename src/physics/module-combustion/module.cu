@@ -160,14 +160,14 @@ __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, fl
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 {
     float moduleConstant = sqrt(3 / M_PI * rho);
-    float sum;
+    float sum = 0;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
         // For every edge in the module, do the following:
 
         Edge* edge = &edges[i]; // will be updated
         float l = edge->length;
-        float prod;
+        float prod = 1;
         do
         {
             // For every edge in the path of the module's root node to the 
@@ -198,17 +198,16 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
 {
     int currNodeInx = nodeInx;
     Edge* edge; // will be updated
-    float prod;
+    float prod = 1;
     do
     {
         // For every edge in the path of the module's root node to the 
         // edge's from node, traversing first from the edge's from node
         // to the root node, do the following: 
 
-        // TODO: use previous edge instead
-        // find the parent 
+        // TODO: use previous edge instead find the parent 
         edge = &edges[nodes[currNodeInx].previousEdge]; 
-        prod *= edge->radiiRatio * rootRadius;
+        prod *= edge->radiiRatio * rootRadius; 
 
         // update currNode
         currNodeInx = edge->fromNode;
@@ -315,6 +314,10 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.moduleConstant = radiiModuleConstant(nodes, edges, module);
     module.boundingMin = minPos;
     module.boundingMax = maxPos;
+
+    module.deltaM = 0;
+    module.temperature = 0;
+    module.waterContent = 0;
 }
 
 __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, Module* modules) 
