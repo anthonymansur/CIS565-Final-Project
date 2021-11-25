@@ -16,12 +16,12 @@ Tree::Tree()
 Tree::~Tree()
 {}
 
-#define RADIUS_REDUCTION 0.9
+#define RADIUS_REDUCTION 0.90 // reduction per meter
 
 void addNode(Terrain* terrain, float length, glm::vec3 dir, int childInx, int parentInx)
 {
     terrain->nodes[childInx].position = terrain->nodes[parentInx].position + (length * dir);
-    terrain->nodes[childInx].radius = terrain->nodes[parentInx].radius * (RADIUS_REDUCTION / length);
+    terrain->nodes[childInx].radius = terrain->nodes[parentInx].radius * (powf(RADIUS_REDUCTION,length));
 }
 
 void addEdge(Terrain* terrain, int edge, int fromNode, int toNode)
@@ -70,7 +70,7 @@ void Tree::AddTree1(Terrain* terrain, glm::vec3 rootPos, float rootRadius)
     }
 
     // append the nodes
-    const int NUM_OF_NODES = 22;
+    const int NUM_OF_NODES = 24;
     for (int i = 0; i < NUM_OF_NODES; i++)
     {
         Node node;
@@ -78,7 +78,7 @@ void Tree::AddTree1(Terrain* terrain, glm::vec3 rootPos, float rootRadius)
     }
 
     // append the edges
-    const int NUM_OF_EDGES = NUM_OF_NODES - 1;
+    const int NUM_OF_EDGES = 21;
     for (int i = 0; i < NUM_OF_EDGES; i++)
     {
         Edge edge;
@@ -162,47 +162,55 @@ void Tree::AddTree1(Terrain* terrain, glm::vec3 rootPos, float rootRadius)
     
     // - module 1
     // -- node 12
+    length = 1;
+    dir = glm::normalize(glm::vec3(-1, rnum(BRANCH_RANDOM), rnum(BRANCH_RANDOM)));
+    addNode(terrain, length, dir, startNodeInx + 12, startNodeInx + 4);
+    // -- node 13
     length = 0.8;
     dir = glm::normalize(glm::vec3(-0.5, 0.5, rnum(BRANCH_RANDOM)));
-    addNode(terrain, length, dir, startNodeInx + 12, startNodeInx + 5);
-    // -- node 13
-    length = 0.5;
-    dir = glm::normalize(glm::vec3(-1, rnum(BRANCH_RANDOM), rnum(BRANCH_RANDOM)));
     addNode(terrain, length, dir, startNodeInx + 13, startNodeInx + 12);
     // -- node 14
-    length = 0.7;
-    dir = glm::normalize(glm::vec3(rnum(BRANCH_RANDOM), 1, rnum(BRANCH_RANDOM)));
-    addNode(terrain, length, dir, startNodeInx + 14, startNodeInx + 12);
-    // --node 15
     length = 0.5;
     dir = glm::normalize(glm::vec3(-1, rnum(BRANCH_RANDOM), rnum(BRANCH_RANDOM)));
-    addNode(terrain, length, dir, startNodeInx + 15, startNodeInx + 14);
-    // -- node 16
+    addNode(terrain, length, dir, startNodeInx + 14, startNodeInx + 13);
+    // -- node 15
+    length = 0.7;
+    dir = glm::normalize(glm::vec3(rnum(BRANCH_RANDOM), 1, rnum(BRANCH_RANDOM)));
+    addNode(terrain, length, dir, startNodeInx + 15, startNodeInx + 13);
+    // --node 16
+    length = 0.5;
+    dir = glm::normalize(glm::vec3(-1, rnum(BRANCH_RANDOM), rnum(BRANCH_RANDOM)));
+    addNode(terrain, length, dir, startNodeInx + 16, startNodeInx + 15);
+    // -- node 17
     length = 0.4;
     dir = glm::normalize(glm::vec3(rnum(BRANCH_RANDOM), 1, rnum(BRANCH_RANDOM)));
-    addNode(terrain, length, dir, startNodeInx + 16, startNodeInx + 14);
+    addNode(terrain, length, dir, startNodeInx + 17, startNodeInx + 15);
     
     // - module 2
-    // -- node 17
-    length = 0.7;
-    dir = glm::normalize(glm::vec3(rnum(BRANCH_RANDOM), 1, rnum(BRANCH_RANDOM)));
-    addNode(terrain, length, dir, startNodeInx + 17, startNodeInx + 11);
     // -- node 18
-    length = 0.8;
+    length = 1;
     dir = glm::normalize(glm::vec3(1, rnum(BRANCH_RANDOM), rnum(BRANCH_RANDOM)));
-    addNode(terrain, length, dir, startNodeInx + 18, startNodeInx + 11);
+    addNode(terrain, length, dir, startNodeInx + 18, startNodeInx + 8);
     // -- node 19
     length = 0.7;
-    dir = glm::normalize(glm::vec3(0.5, 0.5, rnum(BRANCH_RANDOM)));
+    dir = glm::normalize(glm::vec3(rnum(BRANCH_RANDOM), 1, rnum(BRANCH_RANDOM)));
     addNode(terrain, length, dir, startNodeInx + 19, startNodeInx + 18);
     // -- node 20
-    length = 0.7;
+    length = 0.8;
     dir = glm::normalize(glm::vec3(1, rnum(BRANCH_RANDOM), rnum(BRANCH_RANDOM)));
     addNode(terrain, length, dir, startNodeInx + 20, startNodeInx + 18);
     // -- node 21
     length = 0.7;
     dir = glm::normalize(glm::vec3(0.5, 0.5, rnum(BRANCH_RANDOM)));
-    addNode(terrain, length, dir, startNodeInx + 21, startNodeInx + 18);
+    addNode(terrain, length, dir, startNodeInx + 21, startNodeInx + 20);
+    // -- node 22
+    length = 0.7;
+    dir = glm::normalize(glm::vec3(1, rnum(BRANCH_RANDOM), rnum(BRANCH_RANDOM)));
+    addNode(terrain, length, dir, startNodeInx + 22, startNodeInx + 20);
+    // -- node 23
+    length = 0.7;
+    dir = glm::normalize(glm::vec3(0.5, 0.5, rnum(BRANCH_RANDOM)));
+    addNode(terrain, length, dir, startNodeInx + 23, startNodeInx + 20);
     
     // Connect edges
     addEdge(terrain, startEdgeInx + 0, startNodeInx + 0, startNodeInx + 1); // edge 0
@@ -216,40 +224,45 @@ void Tree::AddTree1(Terrain* terrain, glm::vec3 rootPos, float rootRadius)
     addEdge(terrain, startEdgeInx + 8, startNodeInx + 8, startNodeInx + 9); // edge 8
     addEdge(terrain, startEdgeInx + 9, startNodeInx + 8, startNodeInx + 10); // edge 9
     addEdge(terrain, startEdgeInx + 10, startNodeInx + 8, startNodeInx + 11); // edge 10
-    addEdge(terrain, startEdgeInx + 11, startNodeInx + 5, startNodeInx + 12); // edge 11
-    addEdge(terrain, startEdgeInx + 12, startNodeInx + 12, startNodeInx + 13); // edge 12
-    addEdge(terrain, startEdgeInx + 13, startNodeInx + 12, startNodeInx + 14); // edge 13
-    addEdge(terrain, startEdgeInx + 14, startNodeInx + 14, startNodeInx + 15); // edge 14
-    addEdge(terrain, startEdgeInx + 15, startNodeInx + 14, startNodeInx + 16); // edge 15
-    addEdge(terrain, startEdgeInx + 16, startNodeInx + 11, startNodeInx + 17); // edge 16
-    addEdge(terrain, startEdgeInx + 17, startNodeInx + 11, startNodeInx + 18); // edge 17
-    addEdge(terrain, startEdgeInx + 18, startNodeInx + 18, startNodeInx + 19); // edge 18
-    addEdge(terrain, startEdgeInx + 19, startNodeInx + 18, startNodeInx + 20); // edge 19
-    addEdge(terrain, startEdgeInx + 20, startNodeInx + 18, startNodeInx + 21); // edge 20
+    addEdge(terrain, startEdgeInx + 11, startNodeInx + 12, startNodeInx + 13); // edge 11
+    addEdge(terrain, startEdgeInx + 12, startNodeInx + 13, startNodeInx + 14); // edge 12
+    addEdge(terrain, startEdgeInx + 13, startNodeInx + 13, startNodeInx + 15); // edge 13
+    addEdge(terrain, startEdgeInx + 14, startNodeInx + 15, startNodeInx + 16); // edge 14
+    addEdge(terrain, startEdgeInx + 15, startNodeInx + 15, startNodeInx + 17); // edge 15
+    addEdge(terrain, startEdgeInx + 16, startNodeInx + 18, startNodeInx + 19); // edge 16
+    addEdge(terrain, startEdgeInx + 17, startNodeInx + 18, startNodeInx + 20); // edge 17
+    addEdge(terrain, startEdgeInx + 18, startNodeInx + 20, startNodeInx + 21); // edge 18
+    addEdge(terrain, startEdgeInx + 19, startNodeInx + 20, startNodeInx + 22); // edge 19
+    addEdge(terrain, startEdgeInx + 20, startNodeInx + 20, startNodeInx + 23); // edge 20
 
     // update nodes' adjacency list pointers
-    updateNodeAdjcacencyPtrs(terrain, 0, startEdgeInx + 0, startEdgeInx + 0, -1); // node 0
-    updateNodeAdjcacencyPtrs(terrain, 1, startEdgeInx + 1, startEdgeInx + 1, 0); // node 1
-    updateNodeAdjcacencyPtrs(terrain, 2, startEdgeInx + 2, startEdgeInx + 2, 1); // node 2
-    updateNodeAdjcacencyPtrs(terrain, 3, startEdgeInx + 3, startEdgeInx + 5, 2); // node 3
-    updateNodeAdjcacencyPtrs(terrain, 4, startEdgeInx + 6, startEdgeInx + 7, 3); // node 4
-    updateNodeAdjcacencyPtrs(terrain, 5, startEdgeInx + 11, startEdgeInx + 6, 6); // node 5
-    updateNodeAdjcacencyPtrs(terrain, 6, -1, -1, 7); // node 6
-    updateNodeAdjcacencyPtrs(terrain, 7, -1, -1, 4); // node 7
-    updateNodeAdjcacencyPtrs(terrain, 8, startEdgeInx + 8, startEdgeInx + 10, 5); // node 8
-    updateNodeAdjcacencyPtrs(terrain, 9, -1, -1, 8); // node 9
-    updateNodeAdjcacencyPtrs(terrain, 10, -1, -1, 9); // node 10
-    updateNodeAdjcacencyPtrs(terrain, 11, startEdgeInx + 16, startEdgeInx + 17, 10); // node 11
-    updateNodeAdjcacencyPtrs(terrain, 12, startEdgeInx + 12, startEdgeInx + 13, 11); // node 12
-    updateNodeAdjcacencyPtrs(terrain, 13, -1, -1, 12); // node 13
-    updateNodeAdjcacencyPtrs(terrain, 14, startEdgeInx + 14, startEdgeInx + 15, 13); // node 14
-    updateNodeAdjcacencyPtrs(terrain, 15, -1, -1, 14); // node 15
-    updateNodeAdjcacencyPtrs(terrain, 16, -1, -1, 15); // node 16
-    updateNodeAdjcacencyPtrs(terrain, 17, -1, -1, 16); // node 17
-    updateNodeAdjcacencyPtrs(terrain, 18, startEdgeInx + 18, startEdgeInx + 20, 17); // node 18
-    updateNodeAdjcacencyPtrs(terrain, 19, -1, -1, 18); // node 19
-    updateNodeAdjcacencyPtrs(terrain, 20, -1, -1, 18); // node 20
-    updateNodeAdjcacencyPtrs(terrain, 21, -1, -1, 18); // node 21
+    // -module 0
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 0, startEdgeInx + 0, startEdgeInx + 0, -1); // node 0
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 1, startEdgeInx + 1, startEdgeInx + 1, startEdgeInx + 0); // node 1
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 2, startEdgeInx + 2, startEdgeInx + 2, startEdgeInx + 1); // node 2
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 3, startEdgeInx + 3, startEdgeInx + 5, startEdgeInx + 2); // node 3
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 4, startEdgeInx + 6, startEdgeInx + 7, startEdgeInx + 3); // node 4
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 5, startEdgeInx + 11, startEdgeInx + 6, startEdgeInx + 6); // node 5
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 6, -1, -1, startEdgeInx + 7); // node 6
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 7, -1, -1, startEdgeInx + 4); // node 7
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 8, startEdgeInx + 8, startEdgeInx + 10, startEdgeInx + 5); // node 8
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 9, -1, -1, startEdgeInx + 8); // node 9
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 10, -1, -1, startEdgeInx + 9); // node 10
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 11, -1, -1, startEdgeInx + 10); // node 11
+    // -module 1
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 12, startEdgeInx + 11, startEdgeInx + 11, -1); // node 12
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 13, startEdgeInx + 12, startEdgeInx + 13, startEdgeInx + 11); // node 13
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 14, -1, -1, startEdgeInx + 12); // node 14
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 15, startEdgeInx + 14, startEdgeInx + 15, startEdgeInx + 13); // node 15
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 16, -1, -1, startEdgeInx + 14); // node 16
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 17, -1, -1, startEdgeInx + 15); // node 17
+    // -module 2
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 18, startEdgeInx + 16, startEdgeInx + 17, startEdgeInx + 10); // node 18
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 19, -1, -1, startEdgeInx + 16); // node 19
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 20, startEdgeInx + 18, startEdgeInx + 20, startEdgeInx + 17); // node 20
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 21, -1, -1, startEdgeInx + 18); // node 21
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 22, -1, -1, startEdgeInx + 19); // node 22
+    updateNodeAdjcacencyPtrs(terrain, startNodeInx + 23, -1, -1, startEdgeInx + 20); // node 23
 
     // update modules pointers 
     updateModule(
@@ -263,17 +276,17 @@ void Tree::AddTree1(Terrain* terrain, glm::vec3 rootPos, float rootRadius)
     updateModule(
         terrain, 
         startModuleInx + 1, 
+        startNodeInx + 12, 
+        startNodeInx + 17, 
         startNodeInx + 5, 
-        startNodeInx + 16, 
-        startNodeInx + 4, 
         startEdgeInx + 11, 
         startEdgeInx + 15);
     updateModule(
         terrain, 
         startModuleInx + 2, 
+        startNodeInx + 18, 
+        startNodeInx + 23, 
         startNodeInx + 11, 
-        startNodeInx + 21, 
-        startNodeInx + 8, 
         startEdgeInx + 16, 
         startEdgeInx + 20);
 }
