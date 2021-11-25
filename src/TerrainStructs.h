@@ -19,19 +19,6 @@ struct Node
     int lastEdge;
 };
 
-struct Module
-{
-    int previousNode;
-    int rootNode; 
-
-    float temperature;
-    float volume;
-    float density;
-    float startingRadius;
-
-    glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
-};
-
 struct Edge
 {
     int fromNode;
@@ -40,4 +27,30 @@ struct Edge
     float length;
     float radiiRatio;
     glm::vec3 direction;
+};
+
+struct Module
+{
+    int previousNode; // terminal node of previous module
+
+    int startNode; // root node of module
+    int lastNode; // the last node in the module's graph
+    int startEdge; 
+    int lastEdge; // may be a connection node
+    int startModule;
+    int endModule;
+    // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
+
+    // module-level parameters
+    float temperature;
+    float mass, deltaM; 
+    glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
+    float startArea; // lateral surface area before combustion
+    float moduleConstant;
+    float waterContent;
+};
+
+struct ModuleEdge
+{
+    int moduleInx;
 };

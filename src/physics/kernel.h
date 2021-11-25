@@ -5,6 +5,7 @@
 
 #include "../Terrain.h"
 #include "module-combustion/module.h"
+#include "../errors.h"
 #include "advection.h"
 #include "pressure.h"
 
