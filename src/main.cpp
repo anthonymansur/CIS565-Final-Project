@@ -15,6 +15,8 @@
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 
+#define DT 0.016 // in seconds
+
 // variables
 const char* projectName;
 std::string deviceName;
@@ -170,8 +172,6 @@ void mainLoop()
 
 void runCUDA()
 {
-    // TODO: implement
-
     /** Map buffer objects between CUDA and GL */
     // cudaGLMapBufferObject(XXX);
 
@@ -194,6 +194,8 @@ void runCUDA()
 
     /** Unmap buffer objects */
     // cudaGLUnmapBufferObject(XXX);
+
+    Simulation::stepSimulation(DT);
 }
 
 // GLFW Callbacks

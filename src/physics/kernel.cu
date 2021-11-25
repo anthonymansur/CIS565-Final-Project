@@ -18,6 +18,7 @@ dim3 threadsPerBlock(blockSize);
 Node* dev_nodes;
 Edge* dev_edges;
 Module* dev_modules;
+ModuleEdge* dev_moduleEdges;
 
 // Grid Dimensions
 int3 gridCount = { 20, 20, 20 };
@@ -48,16 +49,19 @@ void Simulation::initSimulation(Terrain* terrain)
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
     // Allocate buffers for the modules
-    cudaMalloc((void**)&dev_nodes, terrain->nodes.size() * sizeof(Node));
-    cudaMemcpy(dev_nodes, terrain->nodes.data(), terrain->nodes.size(), cudaMemcpyHostToDevice);
+    HANDLE_ERROR(cudaMalloc((void**)&dev_nodes, terrain->nodes.size() * sizeof(Node)));
+    HANDLE_ERROR(cudaMemcpy(dev_nodes, terrain->nodes.data(), terrain->nodes.size() * sizeof(Node), cudaMemcpyHostToDevice));
 
-    cudaMalloc((void**)&dev_edges, terrain->edges.size() * sizeof(Edge));
-    cudaMemcpy(dev_edges, terrain->edges.data(), terrain->edges.size(), cudaMemcpyHostToDevice);
+    HANDLE_ERROR(cudaMalloc((void**)&dev_edges, terrain->edges.size() * sizeof(Edge)));
+    HANDLE_ERROR(cudaMemcpy(dev_edges, terrain->edges.data(), terrain->edges.size() * sizeof(Edge), cudaMemcpyHostToDevice));
 
-    cudaMalloc((void**)&dev_modules, terrain->modules.size() * sizeof(Module));
-    cudaMemcpy(dev_modules, terrain->modules.data(), terrain->modules.size(), cudaMemcpyHostToDevice);
+    HANDLE_ERROR(cudaMalloc((void**)&dev_modules, terrain->modules.size() * sizeof(Module)));
+    HANDLE_ERROR(cudaMemcpy(dev_modules, terrain->modules.data(), terrain->modules.size() * sizeof(Module), cudaMemcpyHostToDevice));
 
-    // TODO allocate grid buffers
+    HANDLE_ERROR(cudaMalloc((void**)&dev_moduleEdges, terrain->moduleEdges.size() * sizeof(ModuleEdge)));
+    HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyHostToDevice));
+
+    // Allocate grid buffers
     cudaMalloc((void**)&dev_temp, numOfGrids * sizeof(float));
     cudaMemset(dev_temp, T_AMBIANT, numOfGrids * sizeof(float));
 
@@ -87,24 +91,23 @@ void Simulation::initSimulation(Terrain* terrain)
 
     cudaMalloc((void**)&dev_deltaM, numOfGrids * sizeof(float));
     cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float));
-        
-    // TODO: check cuda error
+
+    cudaDeviceSynchronize(); // TODO: is this needed?
+
+    kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
+
+    // Send back to host to check
+    HANDLE_ERROR(cudaMemcpy(terrain->nodes.data(), dev_nodes, terrain->nodes.size() * sizeof(Node), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->edges.data(), dev_edges, terrain->edges.size() * sizeof(Edge), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->modules.data(), dev_modules, terrain->modules.size() * sizeof(Module), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(terrain->moduleEdges.data(), dev_moduleEdges, terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyDeviceToHost));
+
+    cudaDeviceSynchronize(); // TODO: is this needed?
 }
 
 /******************
 * stepSimulation *
 ******************/
-
-__global__ void kernModuleCombustion(float time, int N, Node* nodes, Edge* edges, Module* modules) 
-{
-    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (index >= N) return;
-
-    Module& module = modules[index];
-    Node& rootNode = nodes[module.rootNode];
-
-    // TODO: implement
-}
 
 void Simulation::stepSimulation(float dt)
 {
