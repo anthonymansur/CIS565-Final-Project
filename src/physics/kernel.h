@@ -34,6 +34,7 @@ __device__ int PRESSURE_JACOBI_ITERATIONS = 10; // number of iterations for jaco
 __device__ float EVAP = 0.5362f;                // module water to mass ratio
 __device__ float SMOKE_MASS = 16.f;             // smoke mass contribution coefficient
 __device__ float SMOKE_WATER = 200.f;           // smoke water contribution coefficient
+__device__ float TAU = 200.f;                   // temperature change per pass of wood combusted
 
 
 namespace Simulation

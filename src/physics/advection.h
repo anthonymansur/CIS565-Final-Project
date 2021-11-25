@@ -75,7 +75,7 @@ __global__ void velocityKernel(int3 gridCount, float3 gridSize, float blockSize,
 * @param d_lap buffer to store laplacian for previous temperature values
 */
 __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float* d_oldtemp,
-    float3* d_vel, float3* d_alpha_m, float* lap);
+    float3* d_vel, float3* d_alpha_m, float* lap, float* d_deltaM);
 
 /**
 * @brief Updates smoke density due to advection in the fluid and changes in mass
@@ -93,36 +93,36 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m,
     float* d_smoke, float* d_oldsmoke, float* d_delta_m);
 
-void kernelLauncher(
-    int3 gridCount,
-    float gridSize,
-    float blockSize,
-    float* d_temp,
-    float* d_oldtemp,
-    float3* d_vel,
-    float3* d_oldvel,
-    float* d_pressure,
-    float3* d_ccvel,
-    float3* d_vorticity,
-    float* d_smokedensity,
-    float* d_oldsmokedensity,
-    float* d_smokeRadiance,
-    float3 externalForce,
-    bool sourcesEnabled,
-    int activeBuffer, dim3 Ld, BC bc, dim3 M_in, unsigned int slice);
-
-
-void resetVariables(
-    int3 gridCount,
-    float gridSize,
-    float blockSize,
-    float* d_temp,
-    float* d_oldtemp,
-    float3* d_vel,
-    float3* d_oldvel,
-    float* d_smokedensity,
-    float* d_oldsmokedensity,
-    float* d_pressure,
-    dim3 Ld, BC bc, dim3 M_in);
+//void kernelLauncher(
+//    int3 gridCount,
+//    float gridSize,
+//    float blockSize,
+//    float* d_temp,
+//    float* d_oldtemp,
+//    float3* d_vel,
+//    float3* d_oldvel,
+//    float* d_pressure,
+//    float3* d_ccvel,
+//    float3* d_vorticity,
+//    float* d_smokedensity,
+//    float* d_oldsmokedensity,
+//    float* d_smokeRadiance,
+//    float3 externalForce,
+//    bool sourcesEnabled,
+//    int activeBuffer, dim3 Ld, BC bc, dim3 M_in, unsigned int slice);
+//
+//
+//void resetVariables(
+//    int3 gridCount,
+//    float gridSize,
+//    float blockSize,
+//    float* d_temp,
+//    float* d_oldtemp,
+//    float3* d_vel,
+//    float3* d_oldvel,
+//    float* d_smokedensity,
+//    float* d_oldsmokedensity,
+//    float* d_pressure,
+//    dim3 Ld, BC bc, dim3 M_in);
 
 #endif
