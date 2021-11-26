@@ -63,7 +63,6 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/physics/kernel.h
-    src/Camera.h
     src/cudaMat4.hpp
     src/glslUtility.hpp
     src/utilityCore.hpp
@@ -73,7 +72,6 @@ set(headers
 set(sources
     src/physics/kernel.cu
     src/main.cpp
-    src/Camera.cpp
     src/glslUtility.cpp
     src/utilityCore.cpp
     )

@@ -123,33 +123,27 @@ bool init(int argc, char** argv)
 
 void initVAO() {
 
-    GLfloat vertices[] = {
+    /*GLfloat vertices[] = {
         0.0f, 1.0f, 0.0f,
         25.0f, 1.0f, 0.0f,
         25.0f, 1.0f, 25.0f,
         0.0f, 1.0f, 25.0f,
     };
-
-    //GLfloat vertices[] = {
-    //   -1.0f, -1.0f, 0.0f,
-    //   1.0f, -1.0f, 0.0f,
-    //   1.0f, 1.0f, 0.0f,
-    //   -1.0f, 1.0f, 0.0f,
-    //};
 
     GLfloat texCoords[] = {
         0.0f, 0.0f,
         1.0f, 0.0f,
         1.0f, 1.0f,
         0.0f, 1.0f,
-    };
-
-    /*GLfloat texCoords[] = {
-        0.0f, 1.0f, 0.0f,
-        25.0f, 1.0f, 0.0f,
-        25.0f, 1.0f, 25.0f,
-        0.0f, 1.0f, 25.0f,
     };*/
+
+    // pos (3), color (3), tex (2)
+    GLfloat vertices[] = {
+        -5.f, 0.0f, -10.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 
+        -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 
+        5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
+        5.0f, 0.0f, -10.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f 
+    };
 
     GLushort indices[] = { 0, 1, 2, 2, 0, 3 };
     //glGenBuffers(3, vboID);
@@ -417,8 +411,16 @@ void errorCallback(int error, const char *description) {
       cameraPosition += lookAt;
 
       projection = glm::perspective(fovy, float(width) / float(height), zNear, zFar);
-      glm::mat4 view = glm::lookAt(cameraPosition, lookAt, glm::vec3(0, 0, -1));
+      glm::mat4 view = glm::lookAt(cameraPosition, lookAt, glm::vec3(0, 1, 0));
       projection = projection * view;
+
+      //glm::mat4 view = glm::mat4(1.0f);
+      //glm::mat4 model = glm::mat4(1.0f);
+      //model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+      //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+      //projection = glm::perspective(fovy, (float)width / (float)height, zNear, zFar);
+      //glm::mat4 view = glm::lookAt(cameraPosition, lookAt, glm::vec3(0, 0, -1));
+      //projection = projection * view * model * glm::vec4(cameraPosition, 1.0);
 
       GLint location;
 

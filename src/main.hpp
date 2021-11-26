@@ -38,7 +38,7 @@ const unsigned int PROG = 0;
 
 const float fovy = (float)(PI / 4);
 const float zNear = 0.10f;
-const float zFar = 10.0f;
+const float zFar = 100.0f;
 int width = 1280;
 int height = 720;
 int pointSize = 2; // might not need
@@ -50,7 +50,7 @@ double lastX;
 double lastY;
 float theta = 1.22f;
 float phi = -0.70f;
-float zoom = 4.0f;
+float zoom = 2.0f;
 glm::vec3 lookAt = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 cameraPosition;
 
