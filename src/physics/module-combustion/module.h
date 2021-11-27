@@ -234,3 +234,6 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
  * @param modules device pointer to the modules
  */
 __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, Module* modules);
+
+/** TODO: add description */
+__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass);
