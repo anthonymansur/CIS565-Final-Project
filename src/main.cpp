@@ -5,6 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "main.hpp"
+#include "cylinder.hpp"
 #include <iostream>
 #include <filesystem>
 
@@ -14,6 +15,7 @@
 // variables
 std::string deviceName;
 GLFWwindow* window;
+Cylinder tree = Cylinder(1.0f, 0.2f, 3.0f, 36, 8);
 
 const float DT = 0.2f;
 const int N_FOR_VIS = 2;
@@ -123,26 +125,12 @@ bool init(int argc, char** argv)
 
 void initVAO() {
 
-    /*GLfloat vertices[] = {
-        0.0f, 1.0f, 0.0f,
-        25.0f, 1.0f, 0.0f,
-        25.0f, 1.0f, 25.0f,
-        0.0f, 1.0f, 25.0f,
-    };
-
-    GLfloat texCoords[] = {
-        0.0f, 0.0f,
-        1.0f, 0.0f,
-        1.0f, 1.0f,
-        0.0f, 1.0f,
-    };*/
-
     // pos (3), color (3), tex (2)
     GLfloat vertices[] = {
-        -5.f, 0.0f, -10.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 
+        -5.f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 
         -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 
-        5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
-        5.0f, 0.0f, -10.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f 
+        5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 
+        5.0f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f 
     };
 
     GLushort indices[] = { 0, 1, 2, 2, 0, 3 };
@@ -172,7 +160,6 @@ void initVAO() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
     
-
    // glBindBuffer(GL_ARRAY_BUFFER, 0);
    // glBindVertexArray(0);
 
@@ -307,6 +294,12 @@ void runCUDA()
     cudaGLUnmapBufferObject(PBO);
 }
 
+void drawBranch() {
+    glGenVertexArrays(1, &treeVAO);
+    glBindVertexArray(treeVAO);
+    tree.drawCylinder();
+}
+
 void mainLoop()
 {
     double fps = 0;
@@ -346,14 +339,21 @@ void mainLoop()
         glClear(GL_COLOR_BUFFER_BIT/* | GL_DEPTH_BUFFER_BIT*/);
 
         // texture
-       glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, displayImage);
 
         glUseProgram(program[PROG]);
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+        glBindVertexArray(treeVAO);
+        drawBranch();
+
         glfwSwapBuffers(window);
+
+        glUseProgram(0);
+        glBindVertexArray(0);
 
         /*glUseProgram(program[PROG]);
         glBindVertexArray(VAO);

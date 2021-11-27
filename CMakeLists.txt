@@ -67,6 +67,7 @@ set(headers
     src/glslUtility.hpp
     src/utilityCore.hpp
     src/main.hpp
+    src/cylinder.hpp
     )
 
 set(sources
@@ -74,6 +75,7 @@ set(sources
     src/main.cpp
     src/glslUtility.cpp
     src/utilityCore.cpp
+    src/cylinder.cpp
     )
 
 list(SORT headers)

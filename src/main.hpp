@@ -29,6 +29,7 @@ GLuint displayImage;
 //glslUtility::shaders_t shaders;
 
 GLuint VAO;
+GLuint treeVAO;
 GLuint positions = 0;
 GLuint IBO = 0;
 
