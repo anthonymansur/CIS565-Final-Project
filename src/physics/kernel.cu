@@ -112,7 +112,7 @@ void Simulation::stepSimulation(float dt)
     // - Perform radii update
     // - Update temperature
     // - Update released water content
-    kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, gridCount, sideLength, dev_nodes, dev_edges, dev_modules, dev_oldtemp);
+    kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, gridCount, sideLength, dev_nodes, dev_edges, dev_modules, dev_moduleEdges, dev_oldtemp);
 
     // For each grid point x in grid space
     // - update mass and water content
