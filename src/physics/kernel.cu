@@ -135,8 +135,8 @@ void Simulation::stepSimulation(float dt)
 
     computeVorticity << <gridDim, M_in >> > (gridCount, blockSize, dev_vorticity, dev_oldvel, dev_ccvel);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_oldtemp, dev_vel, dev_oldvel, dev_alpha_m,
-        dev_oldsmokedensity, dev_vorticity, externalForce);
+
+    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_oldtemp, dev_vel, dev_oldvel, dev_alpha_m, dev_oldsmokedensity, dev_vorticity, externalForce);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     // Pressure Solve
@@ -154,6 +154,7 @@ void Simulation::stepSimulation(float dt)
     HANDLE_ERROR(cudaFree(dev_alpha_m));
     HANDLE_ERROR(cudaFree(dev_lap));
 
+    // Ping-pong buffers
     std::swap(dev_temp, dev_oldtemp);
     std::swap(dev_vel, dev_oldvel);
     std::swap(dev_smokedensity, dev_oldsmokedensity);
