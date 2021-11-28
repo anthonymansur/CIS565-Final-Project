@@ -327,7 +327,7 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     // mass contribution
     float dtm = TAU * d_deltaM[k];
 
-    d_temp[k] = dtm + dt + dtR * 2 * DELTA_T;
+    d_temp[k] = -dtm + dt + dtR * 2 * DELTA_T;
 }
 
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 
