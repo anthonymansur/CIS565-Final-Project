@@ -112,7 +112,7 @@ void Simulation::stepSimulation(float dt)
     // - Perform radii update
     // - Update temperature
     // - Update released water content
-    kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, dev_nodes, dev_edges, dev_modules);
+    kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, gridCount, sideLength, dev_nodes, dev_edges, dev_modules, dev_oldtemp);
 
     // For each grid point x in grid space
     // - update mass and water content
@@ -120,7 +120,7 @@ void Simulation::stepSimulation(float dt)
     const dim3 M_in(M_IX, M_IY, M_IZ);
     const dim3 gridDim(blocksNeeded(gridCount.x, M_IX), blocksNeeded(gridCount.y, M_IY), blocksNeeded(gridCount.z, M_IZ));
     
-    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, blockSize, dev_modules, dev_deltaM);
+    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_modules, dev_deltaM);
 
     // Update air temperature
     // update drag forces (wind)

@@ -214,6 +214,9 @@ __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
  */
 __device__ float checkModuleIntersection(Module& module, glm::vec3 pos);
 
+/** TODO: write description */
+__device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max);
+
 /**
  * @brief Initializes the state of the modules before running the simulation
  * 
@@ -233,7 +236,8 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
  * @param edges device pointer to the edges
  * @param modules device pointer to the modules
  */
-__global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, Module* modules);
+// TODO: update params
+__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, float* gridTemp);
 
 /** TODO: add description */
 __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass);
