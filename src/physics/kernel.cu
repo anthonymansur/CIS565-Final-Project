@@ -21,7 +21,7 @@ Module* dev_modules;
 ModuleEdge* dev_moduleEdges;
 
 // Grid Dimensions
-int3 gridCount = { 20, 20, 20 };
+int3 gridCount = { 20, 20, 20 };        
 float3 gridSize = { 20.f, 20.f, 20.f };
 float sideLength = 1.f; // "blockSize"
 
@@ -64,35 +64,35 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyHostToDevice));
 
     // Allocate grid buffers
-    cudaMalloc((void**)&dev_temp, numOfGrids * sizeof(float));
-    cudaMemset(dev_temp, T_AMBIANT, numOfGrids * sizeof(float));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_temp, numOfGrids * sizeof(float)));
+    HANDLE_ERROR(cudaMemset(dev_temp, T_AMBIANT, numOfGrids * sizeof(float)));
 
-    cudaMalloc((void**)&dev_oldtemp, numOfGrids * sizeof(float));
-    cudaMemset(dev_oldtemp, 0, numOfGrids * sizeof(float));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_oldtemp, numOfGrids * sizeof(float)));
+    HANDLE_ERROR(cudaMemset(dev_oldtemp, T_AMBIANT, numOfGrids * sizeof(float)));
 
-    cudaMalloc((void**)&dev_vel, numOfGrids * sizeof(float3));
-    cudaMemset(dev_vel, 0, numOfGrids * sizeof(float3));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_vel, numOfGrids * sizeof(float3)));
+    HANDLE_ERROR(cudaMemset(dev_vel, 0, numOfGrids * sizeof(float3)));
 
-    cudaMalloc((void**)&dev_oldvel, numOfGrids * sizeof(float3));
-    cudaMemset(dev_oldvel, 0, numOfGrids * sizeof(float3));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_oldvel, numOfGrids * sizeof(float3)));
+    HANDLE_ERROR(cudaMemset(dev_oldvel, 0, numOfGrids * sizeof(float3)));
 
-    cudaMalloc((void**)&dev_pressure, numOfGrids * sizeof(float));
-    cudaMemset(dev_pressure, 0, numOfGrids * sizeof(float));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_pressure, numOfGrids * sizeof(float)));
+    HANDLE_ERROR(cudaMemset(dev_pressure, 0, numOfGrids * sizeof(float)));
 
-    cudaMalloc((void**)&dev_ccvel, numOfGrids * sizeof(float3));
-    cudaMemset(dev_ccvel, 0, numOfGrids * sizeof(float3));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_ccvel, numOfGrids * sizeof(float3)));
+    HANDLE_ERROR(cudaMemset(dev_ccvel, 0, numOfGrids * sizeof(float3)));
 
-    cudaMalloc((void**)&dev_vorticity, numOfGrids * sizeof(float3));
-    cudaMemset(dev_vorticity, 0, numOfGrids * sizeof(float3));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_vorticity, numOfGrids * sizeof(float3)));
+    HANDLE_ERROR(cudaMemset(dev_vorticity, 0, numOfGrids * sizeof(float3)));
 
-    cudaMalloc((void**)&dev_smokedensity, numOfGrids * sizeof(float));
-    cudaMemset(dev_smokedensity, 0, numOfGrids * sizeof(float));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_smokedensity, numOfGrids * sizeof(float)));
+    HANDLE_ERROR(cudaMemset(dev_smokedensity, 0, numOfGrids * sizeof(float)));
 
-    cudaMalloc((void**)&dev_oldsmokedensity, numOfGrids * sizeof(float));
-    cudaMemset(dev_oldsmokedensity, 0, numOfGrids * sizeof(float));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_oldsmokedensity, numOfGrids * sizeof(float)));
+    HANDLE_ERROR(cudaMemset(dev_oldsmokedensity, 0, numOfGrids * sizeof(float)));
 
-    cudaMalloc((void**)&dev_deltaM, numOfGrids * sizeof(float));
-    cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_deltaM, numOfGrids * sizeof(float)));
+    HANDLE_ERROR(cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float)));
 
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
 
@@ -153,6 +153,10 @@ void Simulation::stepSimulation(float dt)
 
     HANDLE_ERROR(cudaFree(dev_alpha_m));
     HANDLE_ERROR(cudaFree(dev_lap));
+
+    std::swap(dev_temp, dev_oldtemp);
+    std::swap(dev_vel, dev_oldvel);
+    std::swap(dev_smokedensity, dev_oldsmokedensity);
 
     // For each module in the forest
     // cull modules (and their children) that have zero mass
