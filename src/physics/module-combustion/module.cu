@@ -11,6 +11,8 @@
  */
 __device__ const float T0 = 150, T1 = 450;
 
+__device__ const float T_amb = 15; // TODO: move elsewhere?
+
 /**
  * @brief the saturation temperature of watter
  * @note constant, units: celsius
@@ -316,11 +318,14 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.boundingMax = maxPos;
 
     module.deltaM = 0;
-    module.temperature = 0;
+    if (index == 1)
+        module.temperature = (T0 + T1) / 2; // set module 1 on fire
+    else
+        module.temperature = T_amb;
     module.waterContent = 0;
 }
 
-__global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, Module* modules) 
+__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, float* gridTemp)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
@@ -379,7 +384,8 @@ __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, 
     // TODO: sync threads here?
 
     /** 3. Update temperature */
-    float T = 0; // TODO: get the temperature of the surrounding air
+    float T = getAverageValue(gridTemp, gridCount, blockSize, module.boundingMin, module.boundingMax);
+  
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
     float A_M = area; 
@@ -393,7 +399,7 @@ __global__ void kernModuleCombustion(float DT, int N, Node* nodes, Edge* edges, 
     module.waterContent += deltaW;
 }
 
-
+// TODO: these functions are duplicated in advection.h/.cpp
 __device__ int m_idxClip(int idx, int idxMax) {
     return idx > (idxMax - 1) ? (idxMax - 1) : (idx < 0 ? 0 : idx);
 }
@@ -409,12 +415,55 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     const int k = m_flatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
 
     float3 pos = make_float3((k_x + 0.5f) * blockSize, (k_y + 0.5f) * blockSize, (k_z + 0.5f) * blockSize);
+    glm::vec3 glmPos{ 0.f };
+    glmPos.x = pos.x - floor(gridCount.x * blockSize / 2);
+    glmPos.y = pos.y - floor(gridCount.y * blockSize / 2);
+    glmPos.z = pos.z - floor(gridCount.z * blockSize / 2);
 
     float deltaM = 0;
     for (int i = 0; i < numOfModules; i++)
     {
-        if (checkModuleIntersection(modules[i], glm::vec3(pos.x, pos.y, pos.z)))
+        if (checkModuleIntersection(modules[i], glmPos))
             deltaM += getMassOfModuleAtPoint(modules[i], glm::vec3(pos.x, pos.y, pos.z), blockSize);
     }
     gridOfMass[k] = deltaM;
+}
+
+// TODO: may need to change implementation
+__device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max)
+{
+    // convert terrain-space to grid-space coordinates // e.g. (-10,10) to (0, 20)
+    min.x += floor(gridCount.x * blockSize / 2);
+    min.y += floor(gridCount.y * blockSize / 2);
+    min.z += floor(gridCount.z * blockSize / 2);
+    max.x += floor(gridCount.x * blockSize / 2);
+    max.y += floor(gridCount.y * blockSize / 2);
+    max.z += floor(gridCount.z * blockSize / 2);
+
+    glm::vec3 minPoint, maxPoint;
+    for (int i = 0; i < 2; i++)
+    {
+        // get the min and max coord
+        minPoint[i] = blockSize * round(min[i] / blockSize); // TODO: is there a better way to do this?
+        maxPoint[i] = blockSize * round(max[i] / blockSize);
+    }
+
+    // iterate over all the grid cells
+    float sum = 0.f;
+    int num = 0;
+    for (float i = minPoint.x; i <= maxPoint.x; i += blockSize)
+    {
+        for (float j = minPoint.y; j <= maxPoint.y; j += blockSize)
+        {
+            for (float k = minPoint.z; k <= maxPoint.z; k += blockSize)
+            {
+                if ((i >= gridCount.x) || (j >= gridCount.y) || (k >= gridCount.z)) continue;
+                int inx = m_flatten(i, j, k, gridCount.x, gridCount.y, gridCount.z);
+                sum += buffer[inx];
+                num++;
+            }
+        }
+    }
+
+    return num > 0 ? (sum / num) : 0;
 }
