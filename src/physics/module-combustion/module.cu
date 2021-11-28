@@ -14,7 +14,7 @@ __device__ const float T0 = 150, T1 = 450;
 __device__ const float T_amb = 15; // TODO: move elsewhere?
 
 /**
- * @brief the saturation temperature of watter
+ * @brief the saturation temperature of water
  * @note constant, units: celsius
  */
  __device__ const float T_sat = 100;
@@ -117,7 +117,7 @@ __device__ float getVolume(float r0, float r1, float l)
 
 __device__ float windSpeedFunction(float u)
 {
-    (n_max - 1)* sigmoid(u / u_ref) + 1;
+    return (n_max - 1) * sigmoid(u / u_ref) + 1;
 }
 
 __device__ float computeReactionRate(float temp, float windSpeed)
@@ -155,7 +155,8 @@ __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, fl
     float H = heightOfPyrolyzingFront(H0, A0, mass);
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
-    return -1 * computeReactionRate(temp, windSpeed) * c * frontArea;
+    float k = computeReactionRate(temp, windSpeed);
+    return -1 * k * c * frontArea;
 }
 
 // TODO: verify this is correct before adding it to kernel! 
@@ -225,7 +226,8 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float W, float A_M,
 
     float diffusion = 0; // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
-    float changeOfEnergy = (c_bar * A_M * powf((T_M - T_sat), 3))/(V_M * rho * c_M);
+    // TODO: add back change of energy
+    float changeOfEnergy = 0 /*(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M)*/;
 
     return diffusion + temp_diff - changeOfEnergy; 
 }
@@ -340,10 +342,7 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
     float area = 0;
     float temp = module.temperature;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
-    {
-        if (temp < T0)
-            continue; // no combustion is taking place
-        
+    {   
         // for every branch in the module
         Edge& edge = edges[i];
         Node& fromNode = nodes[edge.fromNode];
@@ -415,6 +414,7 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     const int k = m_flatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
 
     float3 pos = make_float3((k_x + 0.5f) * blockSize, (k_y + 0.5f) * blockSize, (k_z + 0.5f) * blockSize);
+    // converting grid-space to terrain-space
     glm::vec3 glmPos{ 0.f };
     glmPos.x = pos.x - floor(gridCount.x * blockSize / 2);
     glmPos.y = pos.y - floor(gridCount.y * blockSize / 2);
