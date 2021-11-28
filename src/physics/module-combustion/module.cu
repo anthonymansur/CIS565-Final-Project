@@ -424,7 +424,7 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     for (int i = 0; i < numOfModules; i++)
     {
         if (checkModuleIntersection(modules[i], glmPos))
-            deltaM += getMassOfModuleAtPoint(modules[i], glm::vec3(pos.x, pos.y, pos.z), blockSize);
+            deltaM += getMassOfModuleAtPoint(modules[i], glmPos, blockSize);
     }
     gridOfMass[k] = deltaM;
 }
