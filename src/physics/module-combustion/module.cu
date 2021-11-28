@@ -247,10 +247,10 @@ __device__ glm::vec3 centerOfMass(Module& module)
 }
 
 // TODO: transfer these function calls to the fluid solver
-__device__ float getMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
+__device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
     glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.mass;
+    return (1 - glm::distance(x, center) / dx) * module.deltaM;
 }
 
 __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
@@ -424,7 +424,7 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     for (int i = 0; i < numOfModules; i++)
     {
         if (checkModuleIntersection(modules[i], glmPos))
-            deltaM += getMassOfModuleAtPoint(modules[i], glmPos, blockSize);
+            deltaM += getDeltaMassOfModuleAtPoint(modules[i], glmPos, blockSize);
     }
     gridOfMass[k] = deltaM;
 }

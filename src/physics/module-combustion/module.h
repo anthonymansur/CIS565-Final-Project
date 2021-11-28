@@ -181,7 +181,7 @@ __device__ glm::vec3 centerOfMass(Module& module);
 
 // TODO: transfer these function calls to the fluid solver
 /**
- * @brief Get the mass of a module at a given point in space, assuming this point 
+ * @brief Get the change in mass of a module at a given point in space, assuming this point 
  * intersects with the module's bounding box.
  * 
  * @param module the module
@@ -190,7 +190,7 @@ __device__ glm::vec3 centerOfMass(Module& module);
  *
  * @return the mass
  */
-__device__ float getMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
+__device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
 
 /**
  * @brief Get the water content of a module at a given point in space, assuming this point 
