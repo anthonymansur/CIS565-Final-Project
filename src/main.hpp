@@ -34,8 +34,10 @@ GLuint positions = 0;
 GLuint IBO = 0;
 
 GLuint program[2];
+GLuint treeProgram[2];
 
 const unsigned int PROG = 0;
+const unsigned int T_PROG = 0;
 
 const float fovy = (float)(PI / 4);
 const float zNear = 0.10f;
