@@ -327,7 +327,12 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     // mass contribution
     float dtm = TAU * d_deltaM[k];
 
-    d_temp[k] = dtm + dt + dtR * 2 * DELTA_T;
+    d_temp[k] = -dtm + dt + dtR * 2 * DELTA_T;
+    //# if __CUDA_ARCH__>=200
+    //if (d_temp[k] != 20.f) 
+    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtR = %f\n", k, d_temp[k], dtm, dt, dtR);
+
+    //#endif 
 }
 
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 
@@ -411,31 +416,29 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
 //    HANDLE_ERROR(cudaFree(d_lap));
 //}
 //
-//void resetVariables(
-//    int3 gridCount,
-//    float3 gridSize,
-//    float blockSize,
-//    float* d_temp,
-//    float* d_oldtemp,
-//    float3* d_vel,
-//    float3* d_oldvel,
-//    float* d_smokedensity,
-//    float* d_oldsmokedensity,
-//    float* d_pressure,
-//    dim3 Ld, BC bc, dim3 M_in) {
-//    const dim3 gridSizeC(blocksNeeded(gridCount.x, M_in.x),
-//        blocksNeeded(gridCount.y, M_in.y),
-//        blocksNeeded(gridCount.z, M_in.z));
-//    const dim3 gridSizeV(blocksNeeded(gridCount.x + 1, M_in.x),
-//        blocksNeeded(gridCount.y + 1, M_in.y),
-//        blocksNeeded(gridCount.z + 1, M_in.z));
-//
-//    resetKernelCentered << <gridSizeC, M_in >> > (gridCount, d_temp, d_oldtemp, d_smokedensity, d_oldsmokedensity);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    resetKernelVelocity << <gridSizeV, M_in >> > (gridCount, d_vel, d_oldvel);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    resetPressure << <gridSizeC, M_in >> > (gridCount, d_pressure);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//}
+void initGridBuffers(
+    int3 gridCount,
+    float* d_temp,
+    float* d_oldtemp,
+    float3* d_vel,
+    float3* d_oldvel,
+    float* d_smokedensity,
+    float* d_oldsmokedensity,
+    float* d_pressure,
+    dim3 M_in) {
+    const dim3 gridSizeC(blocksNeeded(gridCount.x, M_in.x),
+        blocksNeeded(gridCount.y, M_in.y),
+        blocksNeeded(gridCount.z, M_in.z));
+    const dim3 gridSizeV(blocksNeeded(gridCount.x + 1, M_in.x),
+        blocksNeeded(gridCount.y + 1, M_in.y),
+        blocksNeeded(gridCount.z + 1, M_in.z));
+
+    resetKernelCentered << <gridSizeC, M_in >> > (gridCount, d_temp, d_oldtemp, d_smokedensity, d_oldsmokedensity);
+    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
+
+    resetKernelVelocity << <gridSizeV, M_in >> > (gridCount, d_vel, d_oldvel);
+    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
+
+    resetPressure << <gridSizeC, M_in >> > (gridCount, d_pressure);
+    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
+}
