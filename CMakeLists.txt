@@ -62,17 +62,25 @@ find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
-    src/physics/kernel.h
-    src/physics/module-combustion/module.h
     src/Terrain.h
     src/TerrainStructs.h
+    src/physics/kernel.h
+    src/physics/module-combustion/module.h
+    src/tree/Module.h
+    src/tree/Tree.h
+    src/tree/TruncatedCone.h
+    src/under-development/Terrain.h
     )
 
 set(sources
-    src/physics/kernel.cu
-    src/physics/module-combustion/module.cu
     src/main.cpp
     src/Terrain.cpp
+    src/physics/kernel.cu
+    src/physics/module-combustion/module.cu
+    src/tree/Module.cpp
+    src/tree/Tree.cpp
+    src/tree/TruncatedCone.cpp
+    src/under-development/Terrain.cpp 
     )
 
 list(SORT headers)
