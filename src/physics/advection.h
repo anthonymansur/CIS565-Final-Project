@@ -33,6 +33,10 @@ __device__ float3 operator-(const float3& a, const float3& b);
 __device__ float3 operator*(const float3& a, const float& b);
 __device__ float3 operator*(const float& b, const float3& a);
 
+__global__ void resetKernelCentered(int3 gridCount, float* d_temp, float* d_oldtemp, float* d_smokedensity, float* d_oldsmokedensity);
+
+__global__ void resetKernelVelocity(int3 gridCount, float3* d_vel, float3* d_oldvel);
+
 /**
 * @brief Computes contribution to velocity (wind speed) update due to turbulent forces
 * 
@@ -112,17 +116,15 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
 //    int activeBuffer, dim3 Ld, BC bc, dim3 M_in, unsigned int slice);
 //
 //
-//void resetVariables(
-//    int3 gridCount,
-//    float gridSize,
-//    float blockSize,
-//    float* d_temp,
-//    float* d_oldtemp,
-//    float3* d_vel,
-//    float3* d_oldvel,
-//    float* d_smokedensity,
-//    float* d_oldsmokedensity,
-//    float* d_pressure,
-//    dim3 Ld, BC bc, dim3 M_in);
+void initGridBuffers (
+    int3 gridCount,
+    float* d_temp,
+    float* d_oldtemp,
+    float3* d_vel,
+    float3* d_oldvel,
+    float* d_smokedensity,
+    float* d_oldsmokedensity,
+    float* d_pressure,
+    dim3 M_in);
 
 #endif
