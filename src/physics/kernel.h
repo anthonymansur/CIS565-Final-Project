@@ -43,4 +43,5 @@ namespace Simulation
     void initSimulation(Terrain* terrain);
     void stepSimulation(float dt);
     void endSimulation();
+    void copyBranchesToVBO(float* vbodptr_branches);
 }

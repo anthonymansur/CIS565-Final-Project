@@ -173,9 +173,9 @@ void Simulation::stepSimulation(float dt)
     cudaDeviceSynchronize();
 }
 
-/******************
+/****************
 * endSimulation *
-******************/
+*****************/
 void Simulation::endSimulation()
 {
     // Send back to host to check
@@ -189,4 +189,12 @@ void Simulation::endSimulation()
     cudaFree(dev_nodes);
 
     cudaDeviceSynchronize();
+}
+
+/********************
+* copyBranchesToVBO *
+*********************/
+void Simulation::copyBranchesToVBO(float* vbodptr_branches)
+{
+    // TODO: implement
 }

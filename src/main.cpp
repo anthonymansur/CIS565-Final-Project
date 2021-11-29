@@ -47,8 +47,8 @@ const unsigned int PROG_branches = 1;
 // functions
 bool init(int argc, char** argv);
 void initShaders(GLuint* program);
-void initVAO(Terrain* terrain);
-void mainLoop();
+void initVAO(int NUM_OF_BRANCHES);
+void mainLoop(int NUM_OF_BRANCHES);
 void runCUDA();
 
 void errorCallback(int error, const char* description);
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
         camera.updateCamera(program, 2);
         Simulation::initSimulation(&terrain);
         // TODO: generate terrain
-        mainLoop();
+        mainLoop(terrain.edges.size());
         return 0;
     }
     else
@@ -135,7 +135,7 @@ bool init(int argc, char** argv)
     }
 
     // Initialize drawing state
-    initVAO(&terrain);
+    initVAO(terrain.edges.size());
 
     // **CUDA OpenGL Interoperability**
 
@@ -158,7 +158,7 @@ bool init(int argc, char** argv)
     return true;
 }
 
-void mainLoop()
+void mainLoop(int NUM_OF_BRANCHES)
 {
     double fps = 0;
     double timebase = 0;
@@ -192,10 +192,16 @@ void mainLoop()
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
         glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
 
+        /** Draw terrain */
         glUseProgram(program[PROG_terrain]);
-
         glBindVertexArray(VAO_terrain);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+        /** Draw branches */
+        // TODO: fix
+        //glUseProgram(program[PROG_branches]);
+        //glBindVertexArray(VAO_branches);
+        //glDrawElements(GL_POINTS, NUM_OF_BRANCHES, GL_UNSIGNED_INT, 0); // TODO: verify
 
         glfwSwapBuffers(window);
     }
@@ -226,6 +232,8 @@ void runCUDA()
     // cudaEventElapsedTime(&milliseconds, start, stop);
     
     // std::cout << "FPS: " << FIXED_FLOAT(1 / milliseconds) << std::endl;
+
+    Simulation::copyBranchesToVBO(dptrBranches);
 
     /** Unmap buffer objects */
     cudaGLUnmapBufferObject(VBO_branches);
@@ -260,7 +268,7 @@ void initShaders(GLuint* program) {
     }
 }
 
-void initVAO(Terrain *terrain) {
+void initVAO(int NUM_OF_BRANCHES) {
     
     /** Terrain */
     GLfloat vertices[] =
@@ -292,9 +300,9 @@ void initVAO(Terrain *terrain) {
     glEnableVertexAttribArray(0);
 
     /** Branches */
-    std::unique_ptr<GLfloat[]> branches{ new GLfloat[8 * (terrain->edges.size())] };
+    std::unique_ptr<GLfloat[]> branches{ new GLfloat[8 * NUM_OF_BRANCHES] };
 
-    for (int i = 0; i < (terrain->edges.size()); i++)
+    for (int i = 0; i < NUM_OF_BRANCHES; i++)
     {
         branches[8 * i + 0] = 0.0f;
         branches[8 * i + 1] = 0.0f;
@@ -313,7 +321,7 @@ void initVAO(Terrain *terrain) {
 
     glBindVertexArray(VAO_branches);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_branches);
-    glBufferData(GL_ARRAY_BUFFER, 8 * (terrain->edges.size()) * sizeof(GLfloat), branches.get(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 8 * NUM_OF_BRANCHES * sizeof(GLfloat), branches.get(), GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 6, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
