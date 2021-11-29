@@ -75,6 +75,7 @@ set(headers
     src/glslUtility.hpp
     src/utilityCore.hpp
     src/Triangle.h
+    src/Cylinder.h
     )
 
 set(sources
@@ -89,6 +90,7 @@ set(sources
     src/Entity.cpp
     src/glslUtility.cpp
     src/utilityCore.cpp
+    src/Cylinder.cpp
     )
 
 list(SORT headers)

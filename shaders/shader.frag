@@ -18,12 +18,21 @@ void main (void) {
     gl_FragColor += color;
 }*/
 
-#version 330
+// #version 330
 
-in vec3 color;
-out vec4 outColor;
+// in vec3 color;
+// out vec4 outColor;
 
-void main() {
-    outColor = vec4(color, 1.0f);
-    /*gl_FragColor = color;*/
-}
+// void main() {
+//     outColor = vec4(color, 1.0f);
+// }
+
+#version 330 core
+out vec4 FragColor;
+  
+in vec3 vertexColor; // the input variable from the vertex shader (same name and same type)  
+
+void main()
+{
+    FragColor = vec4(vertexColor, 1.0f);
+} 

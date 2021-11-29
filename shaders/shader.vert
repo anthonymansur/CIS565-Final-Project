@@ -9,14 +9,15 @@ void main(void) {
     gl_Position = ftransform ();
 }*/
 
-#version 330
-layout (location = 0) in vec3 inPos;
+#version 330 core
+layout (location = 0) in vec3 aPos;
 
 uniform mat4 u_projMatrix;
+  
+out vec3 vertexColor;
 
-out vec3 color;
-
-void main() {
-    gl_Position = u_projMatrix * vec4(inPos, 1.0);
-    color = vec3(60, 230, 108); // green
+void main()
+{
+    gl_Position = u_projMatrix * vec4(aPos, 1.0);
+    vertexColor = vec3(0.24, 0.92, 0.42); 
 }

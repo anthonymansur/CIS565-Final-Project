@@ -13,6 +13,7 @@
 #include "Camera.h"
 #include "Terrain.h"
 #include "Triangle.h"
+#include "Cylinder.h"
 
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
@@ -26,9 +27,10 @@ int height = 720;
 
 Camera camera = Camera();
 Terrain terrain = Terrain();
+Cylinder branch = Cylinder(0.5, 0.3, 3.0, 36, 8);
 std::vector<Geom> geoms;
 GLuint program[2];
-const char* attributeLocations[] = { "Position" };
+const char* attributeLocations[] = { "Normals", "Position", "TexCoords"};
 GLuint positionLocation = 1;
 GLuint VAO;
 GLuint PBO;
@@ -36,6 +38,7 @@ GLuint IBO;
 GLuint VBO;
 GLuint displayImage;
 int num_triangles = 0;
+int num_verts = 0;
 
 const unsigned int PROG = 0;
 
@@ -128,7 +131,7 @@ bool init(int argc, char** argv)
     }
 
     // Initialize shaders
-    geoms.push_back(terrain.grass);
+    //geoms.push_back(terrain.grass);
 
     initShaders(program);
     initVAO();
@@ -182,20 +185,20 @@ void mainLoop()
         glfwSetWindowTitle(window, ss.str().c_str());
 
         // GL commands go here for visualization
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
+        /*glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
         glBindTexture(GL_TEXTURE_2D, displayImage);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);*/
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
         glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, displayImage);
+        /*glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, displayImage);*/
 
         glUseProgram(program[PROG]);
 
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+        glDrawElements(GL_TRIANGLES, (unsigned int)branch.indices.size(), GL_UNSIGNED_SHORT, 0);
 
         glfwSwapBuffers(window);
     }
@@ -236,7 +239,7 @@ void initShaders(GLuint* program) {
     program[PROG] = glslUtility::createProgram(
         "shaders/shader.vert.",
         /*"shaders/graphics.geom.glsl",*/
-        "shaders/shader.frag", attributeLocations, 1);
+        "shaders/shader.frag", attributeLocations, 3);
     glUseProgram(program[PROG]);
 
     //glBindVertexArray(VAO);
@@ -302,7 +305,7 @@ void initVAO() {
                 indices.push_back(i + 6); // some offset to correspond to number of bottom verts
             }
             //bottom circle
-
+            
 
         }
         else if (g.type == LEAF) {
@@ -313,6 +316,8 @@ void initVAO() {
         }
     }
 
+    num_verts = indices.size();
+
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &IBO);
@@ -320,13 +325,19 @@ void initVAO() {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * branch.interleavedVertices.size(), branch.interleavedVertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * indices.size(), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * branch.indices.size(), branch.indices.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); //maybe change
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 }
 
 // GLFW Callbacks
