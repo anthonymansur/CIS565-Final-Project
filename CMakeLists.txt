@@ -62,33 +62,36 @@ find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
+    src/glslUtility.hpp
+    src/Camera.h
+    src/utilityCore.hpp
+
+    src/errors.h
     src/Terrain.h
     src/TerrainStructs.h
+    src/Tree.h
+
+    src/physics/advection.h
+    src/physics/pressure.h
     src/physics/kernel.h
+    src/physics/vec3.h
     src/physics/module-combustion/module.h
-    src/tree/Module.h
-    src/tree/Tree.h
-    src/tree/TruncatedCone.h
-    src/Camera.h
-    src/Entity.h
-    src/cudaMat4.hpp
-    src/glslUtility.hpp
-    src/utilityCore.hpp
-    src/Triangle.h
     )
 
 set(sources
     src/main.cpp
+
+    src/glslUtility.cpp
+    src/Camera.cpp
+    src/utilityCore.cpp
+
     src/Terrain.cpp
+    src/Tree.cpp
+
+    src/physics/advection.cu
+    src/physics/pressure.cu
     src/physics/kernel.cu
     src/physics/module-combustion/module.cu
-    src/tree/Module.cpp
-    src/tree/Tree.cpp
-    src/tree/TruncatedCone.cpp
-    src/Camera.cpp
-    src/Entity.cpp
-    src/glslUtility.cpp
-    src/utilityCore.cpp
     )
 
 list(SORT headers)

@@ -18,6 +18,8 @@
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 
+#define DT 0.016 // in seconds
+
 // variables
 const char* projectName;
 std::string deviceName;
@@ -27,7 +29,6 @@ int height = 720;
 
 Camera camera = Camera(width / (height * 1.f));
 Terrain terrain = Terrain();
-std::vector<Geom> geoms;
 GLuint program[2];
 const char* attributeLocations[] = { "Position" };
 GLuint positionLocation = 1;
@@ -59,6 +60,8 @@ int main(int argc, char* argv[])
     if (init(argc, argv))
     {
         Terrain terrain;
+        camera.UpdateOrbit(0, -25, -15);
+        camera.updateCamera(&program[PROG]);
         // TODO: generate terrain
         Simulation::initSimulation(&terrain);
         mainLoop();
@@ -129,7 +132,6 @@ bool init(int argc, char** argv)
     }
 
     // Initialize shaders
-    geoms.push_back(terrain.grass);
 
     initShaders(program);
     initVAO();
@@ -206,8 +208,6 @@ void mainLoop()
 
 void runCUDA()
 {
-    // TODO: implement
-
     /** Map buffer objects between CUDA and GL */
     // cudaGLMapBufferObject(XXX);
 
@@ -230,6 +230,8 @@ void runCUDA()
 
     /** Unmap buffer objects */
     // cudaGLUnmapBufferObject(XXX);
+
+    Simulation::stepSimulation(DT);
 }
 
 void initShaders(GLuint* program) {

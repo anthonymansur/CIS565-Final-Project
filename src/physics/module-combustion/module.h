@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../TerrainStructs.h"
+
 // device function prototypes
 /**
  * @brief sigmoid-like function that interpolates smoothly from zero to one for
@@ -20,7 +22,7 @@ __device__ float sigmoid(float x);
  *
  * @return the area
  */
-__device__ float area(float r0, float r1, float l);
+__device__ float getArea(float r0, float r1, float l);
 
 /**
  * @brief the volume of the branch
@@ -31,7 +33,7 @@ __device__ float area(float r0, float r1, float l);
  *
  * @return the volume
  */
-__device__ float volume(float r0, float r1, float l);
+__device__ float getVolume(float r0, float r1, float l);
 
 /**
  * @brief wind function used to scale the reaction rate
@@ -94,13 +96,13 @@ __device__ float charLayerInsulation(float H_c);
  * 
  * @return the area, A
  */
-__device__ float frontArea(float A0, float H0, float H);
+__device__ float getFrontArea(float A0, float H0, float H);
 
 /**
  * @brief The rate of mass chass of a given module
  * 
  * @param mass the current mass of the module
- * @param H0 the original depth of the volumetric portion represenbed by a 
+ * @param H0 the original depth of the volumetric portion represented by a 
  * surface element
  * @param A0 the starting surface area of the pyrolyzing front
  * @param temp the temperature of the module
@@ -110,3 +112,133 @@ __device__ float frontArea(float A0, float H0, float H);
  * @return the rate
  */
 __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, float frontArea, float windSpeed);
+
+/**
+ * @brief Derives a constant that will be used during the radii update algorithm
+ * 
+ * @param nodes device pointer to all the nodes in the forest
+ * @param edges device pointer to all the edges in the forest
+ * @param module the current module we are updating the radii for
+ * 
+ * @return the constant, psi_M
+ */
+__device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module);
+
+/**
+ * @brief Gets the new radius of the root branch for given module 
+ * 
+ * @param nodes device pointer to all the nodes in the forest
+ * @param edges device pointer to all the edges in the forest
+ * @param module the current module we are updating the radii for
+ * @param deltaMass the change in mass of the module
+ * 
+ * @return the new radius
+ */
+__device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, float deltaMass);
+
+/**
+ * @brief Gets the new radius of the given branch in the module 
+ * 
+ * @param nodes device pointer to all the nodes in the forest
+ * @param edges device pointer to all the edges in the forest
+ * @param module the current module we are updating the radii for
+ * @param nodeInx the index of the node we are updating the radius for
+ * 
+ * @return the new radius
+ */
+__device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius);
+
+/**
+ * @brief Gets the rate of change of temperature in the module
+ * 
+ * @param T the temperature of the surrounding air
+ * @param T_M the module's temperature
+ * @param T_adj average temperature of adjacent modules
+ * @param W the water content
+ * @param A_M the surface area of the module
+ * @param V_M the volume of the module
+ * 
+ * @return the new radius
+ */
+__device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M);
+
+/**
+ * @brief Gets the rate of water change for a module given its change in mass
+ * 
+ * @param changeInMass change in mass of the module 
+ * 
+ * @return the rate
+ */
+__device__ float rateOfWaterChange(float changeInMass);
+
+/**
+ * @brief Get the center of mass of a module
+ * 
+ * @param module the module
+ *
+ * @return the center of mass
+ */
+__device__ glm::vec3 centerOfMass(Module& module);
+
+// TODO: transfer these function calls to the fluid solver
+/**
+ * @brief Get the change in mass of a module at a given point in space, assuming this point 
+ * intersects with the module's bounding box.
+ * 
+ * @param module the module
+ * @param x the point in space
+ * @param dx delta x
+ *
+ * @return the mass
+ */
+__device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
+
+/**
+ * @brief Get the water content of a module at a given point in space, assuming this point 
+ * intersects with the module's bounding box.
+ * 
+ * @param module the module
+ * @param x the point in space
+ * @param dx delta x
+ *
+ * @return the water content
+ */
+__device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
+
+/**
+ * @brief Check if module intersects this space
+ * 
+ * @param module
+ * @param pos
+ *
+ * @return true if intersects, false otherwise
+ */
+__device__ float checkModuleIntersection(Module& module, glm::vec3 pos);
+
+/** TODO: write description */
+__device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max);
+
+/**
+ * @brief Initializes the state of the modules before running the simulation
+ * 
+ * @param N the number of modules
+ * @param nodes device pointer to the nodes
+ * @param edges device pointer to the edges
+ * @param modules device pointer to the modules
+ */
+__global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules);
+
+/**
+ * @brief Runs the module combustion algorithm
+ * 
+ * @param DT delta time
+ * @param N the number of modules
+ * @param nodes device pointer to the nodes
+ * @param edges device pointer to the edges
+ * @param modules device pointer to the modules
+ */
+// TODO: update params
+__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp);
+
+/** TODO: add description */
+__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass);
