@@ -41,7 +41,7 @@ Terrain::Terrain() {
 	grass.triangles.push_back(t12);*/
 
 	grass.type = LEAF;
-	grass.num_verts = 8;
+	grass.num_verts = 3; // CHANGE
 
 	//grass.indices = { 0, 1, 2, 2, 0, 3, 3, 4, 0, 0, 4, 5, 0, 5, 6, 6, 0, 1, 6, 1, 7, 7, 1, 2, 7, 2, 3, 3, 7, 4, 4, 5, 7, 7, 6, 5 };
 };

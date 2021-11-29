@@ -21,14 +21,13 @@ void Camera::updateCamera(GLuint* program) {
 	position += lookAt;
 
 	projection = glm::perspective(fovy, float(width) / float(height), zNear, zFar);
-	glm::mat4 view = glm::lookAt(position, lookAt, glm::vec3(0, 1, 0));
+	glm::mat4 view = glm::lookAt(position, lookAt, glm::vec3(0, 0, -1));
 	projection = projection * view;
 
-	const GLfloat value = projection[0][0];
 	GLint location;
 	glUseProgram(program[0]);
 	if ((location = glGetUniformLocation(program[0], "u_projMatrix")) != -1) {
-		glUniformMatrix4fv(location, 1, GL_FALSE, &value);
+		glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
 	}
 }
 
