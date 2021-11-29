@@ -19,9 +19,9 @@ void Cylinder::buildVertices() {
     std::vector<float>().swap(circleVertices);
     for (int i = 0; i <= sectorCount; ++i) {
         sectorAngle = i * sectorStep;
-        circleVertices.push_back(sin(sectorAngle)); // x
-        circleVertices.push_back(0); // y
-        circleVertices.push_back(cos(sectorAngle)); // z
+        circleVertices.push_back(cos(sectorAngle)); // x
+        circleVertices.push_back(sin(sectorAngle)); // y
+        circleVertices.push_back(0); // z
     }
 
     clearArrays();
@@ -31,30 +31,30 @@ void Cylinder::buildVertices() {
 
     // normals - not sure if we need this currently
     float yAngle = atan2(baseRadius - topRadius, height);
-    float x0 = 0;               // nx
-    float y0 = sin(yAngle);     // ny
-    float z0 = cos(yAngle);     // nz
+    float x0 = cos(yAngle);               // nx
+    float y0 = 0;     // ny
+    float z0 = sin(yAngle);     // nz
     
     std::vector<float> sideNormals;
     for (int i = 0; i <= sectorCount; ++i) {
         sectorAngle2 = i * sectorStep;
-        sideNormals.push_back(cos(sectorAngle2) * z0 - sin(sectorAngle2) * x0);   // nz
-        sideNormals.push_back(sin(sectorAngle2) * z0 + cos(sectorAngle2) * x0);   // nx
-        sideNormals.push_back(y0);  // ny
+        sideNormals.push_back(cos(sectorAngle2) * x0 - sin(sectorAngle2) * y0);   // nx
+        sideNormals.push_back(sin(sectorAngle2) * x0 + cos(sectorAngle2) * y0);   // ny
+        sideNormals.push_back(z0);  // nz
     }
 
     // scale unit circle
     for (int i = 0; i <= stackCount; ++i) {
-        y = -(height * 0.5f) + (float)i / stackCount * height;      // vertex position y
+        z = -(height * 0.5f) + (float)i / stackCount * height;      // vertex position z
         radius = baseRadius + (float)i / stackCount * (topRadius - baseRadius);     // lerp
         float t = 1.0f - (float)i / stackCount;   // top-to-bottom
 
         for (int j = 0, k = 0; j <= sectorCount; ++j, k += 3) {
             x = circleVertices[k];
-            z = circleVertices[k + 2];
+            y = circleVertices[k + 1];
             vertices.push_back(x * radius); // position
-            vertices.push_back(y);
-            vertices.push_back(z * radius);
+            vertices.push_back(y * radius);
+            vertices.push_back(z);
             normals.push_back(sideNormals[k]);  // normal
             normals.push_back(sideNormals[k + 1]);
             normals.push_back(sideNormals[k + 2]);
@@ -65,52 +65,52 @@ void Cylinder::buildVertices() {
 
     unsigned int baseVertexIndex = (unsigned int)vertices.size() / 3;
 
-    y = -height * 0.5f;
+    z = -height * 0.5f;
     vertices.push_back(0); 
-    vertices.push_back(y);
     vertices.push_back(0);
+    vertices.push_back(z);
     normals.push_back(0); 
-    normals.push_back(-1);
     normals.push_back(0);
+    normals.push_back(-1);
     texCoords.push_back(0.5f);
     texCoords.push_back(0.5f);
 
     for (int i = 0, j = 0; i < sectorCount; ++i, j += 3) {
         x = circleVertices[j];
-        z = circleVertices[j + 2];
+        y = circleVertices[j + 1];
         vertices.push_back(x * baseRadius);
-        vertices.push_back(y);
-        vertices.push_back(z * baseRadius);
+        vertices.push_back(y * baseRadius);
+        vertices.push_back(z);
+        normals.push_back(0);
         normals.push_back(0);
         normals.push_back(-1);
-        normals.push_back(0);
         texCoords.push_back(-x * 0.5f + 0.5f);
-        texCoords.push_back(-z * 0.5f + 0.5f);
+        texCoords.push_back(-y * 0.5f + 0.5f);
     }
 
     unsigned int topVertexIndex = (unsigned int)vertices.size() / 3;
 
-    y = height * 0.5f;
+    z = height * 0.5f;
     vertices.push_back(0);
-    vertices.push_back(y);
     vertices.push_back(0);
+    vertices.push_back(z);
+    normals.push_back(0);
     normals.push_back(0);
     normals.push_back(1);
-    normals.push_back(0);
     texCoords.push_back(0.5f);
     texCoords.push_back(0.5f);
 
     for (int i = 0, j = 0; i < sectorCount; ++i, j += 3) {
         x = circleVertices[j];
-        z = circleVertices[j + 2];
+        y = circleVertices[j + 1];
         vertices.push_back(x * topRadius);
-        vertices.push_back(y);
-        vertices.push_back(z * topRadius);
+        vertices.push_back(y * topRadius);
+        vertices.push_back(z);
+        normals.push_back(0);
         normals.push_back(0);
         normals.push_back(1);
-        normals.push_back(0);
-        texCoords.push_back(-x * 0.5f + 0.5f); //check this
-        texCoords.push_back(z * 0.5f + 0.5f);
+        texCoords.push_back(x * 0.5f + 0.5f); //check this
+        texCoords.push_back(-z * 0.5f + 0.5f);
     }
 
     unsigned int k1, k2;
