@@ -10,7 +10,9 @@
 #include <cuda_gl_interop.h>
 
 #include "physics/kernel.h"
+#include "Camera.h"
 #include "Terrain.h"
+#include "Triangle.h"
 
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
@@ -22,16 +24,31 @@ GLFWwindow* window;
 int width = 1280;
 int height = 720;
 
+Camera camera = Camera();
+Terrain terrain = Terrain();
+std::vector<Geom> geoms;
+GLuint program[2];
+const char* attributeLocations[] = { "Position" };
+GLuint positionLocation = 1;
+GLuint VAO;
+GLuint PBO;
+GLuint IBO;
+GLuint VBO;
+int num_triangles = 0;
+
+const unsigned int PROG = 0;
 
 // functions
 bool init(int argc, char** argv);
+void initShaders(GLuint* program);
+void initVAO();
 void mainLoop();
 void runCUDA();
 
 void errorCallback(int error, const char* description);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-void mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
+void mouseButton(GLFWwindow* window, int button, int action, int mods);
+void mousePosition(GLFWwindow* window, double xpos, double ypos);
 
 int main(int argc, char* argv[])
 {
@@ -100,8 +117,8 @@ bool init(int argc, char** argv)
     } 
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, keyCallback);
-    glfwSetCursorPosCallback(window, mousePositionCallback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetCursorPosCallback(window, mousePosition);
+    glfwSetMouseButtonCallback(window, mouseButton);
 
     
     glewExperimental = GL_TRUE;
@@ -109,9 +126,11 @@ bool init(int argc, char** argv)
         return false;
     }
 
-    // Initialize drawing state
-    // TODO: implement
+    // Initialize shaders
+    geoms.push_back(terrain.grass);
 
+    initShaders(program);
+    initVAO();
 
     // **CUDA OpenGL Interoperability**
 
@@ -123,7 +142,7 @@ bool init(int argc, char** argv)
     // TODO: impelment
 
     // camera setup
-    // TODO: implement
+    camera.updateCamera(program);
 
     // GL enables go here 
 
@@ -161,7 +180,14 @@ void mainLoop()
         glfwSetWindowTitle(window, ss.str().c_str());
 
         // GL commands go here for visualization
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
         glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
+
+        glUseProgram(program[PROG]);
+
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 1, GL_UNSIGNED_SHORT, 0);
+
         glfwSwapBuffers(window);
     }
     glfwDestroyWindow(window);
@@ -196,6 +222,98 @@ void runCUDA()
     // cudaGLUnmapBufferObject(XXX);
 }
 
+void initShaders(GLuint* program) {
+    GLuint location;
+    program[PROG] = glslUtility::createProgram(
+        "shaders/shader.vert.",
+        /*"shaders/graphics.geom.glsl",*/
+        "shaders/shader.frag", attributeLocations, 1);
+    glUseProgram(program[PROG]);
+
+    //glBindVertexArray(VAO);
+
+    // does this need to be changed?
+    const GLfloat value4 = camera.projection[0][0];
+    const GLfloat value3 = camera.position[0];
+
+    if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &value4);
+    }
+    if ((location = glGetUniformLocation(program[PROG], "u_cameraPos")) != -1) {
+        glUniform3fv(location, 1, &value3);
+    }
+}
+
+void initVAO() {
+    
+    std::vector<GLfloat> vertices;
+    std::vector<GLfloat> indices;
+    int offset = 0;
+
+    for (Geom &g : geoms) {
+        for (Triangle &t : g.triangles) {
+            vertices.push_back(t.p1.pos.x);
+            vertices.push_back(t.p1.pos.y);
+            vertices.push_back(t.p1.pos.z);
+            vertices.push_back(t.p2.pos.x);
+            vertices.push_back(t.p2.pos.y);
+            vertices.push_back(t.p2.pos.z);
+            vertices.push_back(t.p3.pos.x);
+            vertices.push_back(t.p3.pos.y);
+            vertices.push_back(t.p3.pos.z);
+            num_triangles++;
+        }
+        // fill index buffer
+        if (g.type == RECT) {
+            for (int i = 1; i <= g.num_verts - 3; i++) {
+                indices.push_back(0);
+                indices.push_back(i);
+                indices.push_back(i + 1);
+
+                indices.push_back(g.num_verts - 1);
+                indices.push_back(i);
+                indices.push_back(i + 1);
+            }
+            indices.push_back(0);
+            indices.push_back(g.num_verts - 2);
+            indices.push_back(1);
+
+            indices.push_back(g.num_verts - 1);
+            indices.push_back(g.num_verts - 2);
+            indices.push_back(1);
+        }
+        else if (g.type == BRANCH) {
+            // TODO
+        }
+        else if (g.type == LEAF) {
+            indices.push_back(0);
+            indices.push_back(1);
+            indices.push_back(2);
+        }
+    }
+
+    for (int i = 0; i < indices.size(); i++) {
+        std::cout << indices[i] << std::endl;
+    }
+
+    GLfloat* verticesData = vertices.data();
+    GLfloat* indexData = indices.data();
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &IBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), verticesData, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indexData, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); //maybe change
+}
+
 // GLFW Callbacks
 void errorCallback(int error, const char *description) {
     fprintf(stderr, "error %d: %s\n", error, description);
@@ -207,10 +325,10 @@ void errorCallback(int error, const char *description) {
     }
   }
 
-  void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    // TODO: implement (for camera)
+  void mouseButton(GLFWwindow* window, int button, int action, int mods) {
+      camera.mouseButtonCallback(window, button, action, mods);
   }
 
-  void mousePositionCallback(GLFWwindow* window, double xpos, double ypos) {
-    // TODO: implement (for camera)
+  void mousePosition(GLFWwindow* window, double xpos, double ypos) {
+      camera.mousePositionCallback(window, xpos, ypos, program);
   }
