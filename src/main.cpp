@@ -241,7 +241,6 @@ void initShaders(GLuint* program) {
 
     //glBindVertexArray(VAO);
 
-
     if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &camera.projection[0][0]);
     }
