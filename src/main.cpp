@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
+#include <glm/gtx/transform.hpp>
 
 #include "physics/kernel.h"
 #include "Camera.h"
@@ -24,7 +25,7 @@ GLFWwindow* window;
 int width = 1280;
 int height = 720;
 
-Camera camera = Camera();
+Camera camera = Camera(width / (height * 1.f));
 Terrain terrain = Terrain();
 std::vector<Geom> geoms;
 GLuint program[2];
@@ -242,76 +243,33 @@ void initShaders(GLuint* program) {
     //glBindVertexArray(VAO);
 
     if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
-        glUniformMatrix4fv(location, 1, GL_FALSE, &camera.projection[0][0]);
+        glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
     }
     if ((location = glGetUniformLocation(program[PROG], "u_cameraPos")) != -1) {
         glUniform3fv(location, 1, &camera.position[0]);
+    }
+    
+    //glm::mat4 model = glm::rotate(90.f, glm::vec3(1.f, 0.f, 0.f));
+    glm::mat4 model = glm::mat4(1.f);
+    if ((location = glGetUniformLocation(program[PROG], "u_model")) != -1) {
+        glUniformMatrix4fv(location, 1, GL_FALSE , &model[0][0]);
     }
 }
 
 void initVAO() {
     
-    std::vector<GLfloat> vertices;
-    std::vector<GLushort> indices;
-    int offset = 0;
+    GLfloat vertices[] =
+    {
+        -10.0f, 0.0f, -10.0f, // bottom left
+        -10.0f, 0.0f, 10.0f, // top left
+        10.0f, 0.f, 10.0f, // top right
+        10.0f, 0.f, -10.0f // bottom right
+    };
 
-    for (Geom &g : geoms) {
-        for (Triangle &t : g.triangles) {
-            vertices.push_back(t.p1.pos.x);
-            vertices.push_back(t.p1.pos.y);
-            vertices.push_back(t.p1.pos.z);
-            vertices.push_back(t.p2.pos.x);
-            vertices.push_back(t.p2.pos.y);
-            vertices.push_back(t.p2.pos.z);
-            vertices.push_back(t.p3.pos.x);
-            vertices.push_back(t.p3.pos.y);
-            vertices.push_back(t.p3.pos.z);
-            num_triangles++;
-        }
-        // fill index buffer
-        if (g.type == RECT) {
-            // ground
-            for (int i = 1; i <= g.num_verts - 3; i++) {
-                indices.push_back(0);
-                indices.push_back(i);
-                indices.push_back(i + 1);
-
-                indices.push_back(g.num_verts - 1);
-                indices.push_back(i);
-                indices.push_back(i + 1);
-            }
-            indices.push_back(0);
-            indices.push_back(g.num_verts - 2);
-            indices.push_back(1);
-
-            indices.push_back(g.num_verts - 1);
-            indices.push_back(g.num_verts - 2);
-            indices.push_back(1);
-        }
-        else if (g.type == BRANCH) {
-            // top circle
-            for (int i = 1; i < 6; i++) { //change 6 to sect number
-                indices.push_back(0);
-                indices.push_back(i);
-                indices.push_back(i + 1);
-            }
-            //middle
-            for (int i = 1; i < 6; i++) {
-                indices.push_back(i);
-                indices.push_back(i + 1);
-                indices.push_back(i + 6); // some offset to correspond to number of bottom verts
-            }
-            //bottom circle
-
-
-        }
-        else if (g.type == LEAF) {
-            // triangle leaves for now
-            indices.push_back(0);
-            indices.push_back(1);
-            indices.push_back(2);
-        }
-    }
+    GLushort indices[] =
+    {
+        0, 1, 2, 0, 2, 3
+    };
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -320,10 +278,10 @@ void initVAO() {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * indices.size(), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); //maybe change
     glEnableVertexAttribArray(0);
