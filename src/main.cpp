@@ -33,11 +33,8 @@ GLuint program[2];
 const char* attributeLocations[] = { "Position" };
 GLuint positionLocation = 1;
 GLuint VAO;
-GLuint PBO;
 GLuint IBO;
 GLuint VBO;
-GLuint displayImage;
-int num_triangles = 0;
 
 const unsigned int PROG = 0;
 
@@ -185,15 +182,8 @@ void mainLoop()
         glfwSetWindowTitle(window, ss.str().c_str());
 
         // GL commands go here for visualization
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
-        glBindTexture(GL_TEXTURE_2D, displayImage);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
         glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, displayImage);
 
         glUseProgram(program[PROG]);
 
@@ -209,7 +199,6 @@ void mainLoop()
 void runCUDA()
 {
     /** Map buffer objects between CUDA and GL */
-    // cudaGLMapBufferObject(XXX);
 
     /** Timing analysis? */
     // cudaEvent_t start, stop;
