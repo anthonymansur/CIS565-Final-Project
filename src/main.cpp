@@ -199,9 +199,9 @@ void mainLoop(int NUM_OF_BRANCHES)
 
         /** Draw branches */
         // TODO: fix
-        //glUseProgram(program[PROG_branches]);
-        //glBindVertexArray(VAO_branches);
-        //glDrawElements(GL_POINTS, NUM_OF_BRANCHES, GL_UNSIGNED_INT, 0); // TODO: verify
+        glUseProgram(program[PROG_branches]);
+        glBindVertexArray(VAO_branches);
+        glDrawArrays(GL_POINTS, 0, NUM_OF_BRANCHES);
 
         glfwSwapBuffers(window);
     }
@@ -321,9 +321,13 @@ void initVAO(int NUM_OF_BRANCHES) {
 
     glBindVertexArray(VAO_branches);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_branches);
-    glBufferData(GL_ARRAY_BUFFER, 8 * NUM_OF_BRANCHES * sizeof(GLfloat), branches.get(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,  NUM_OF_BRANCHES * (8 * sizeof(GLfloat)), branches.get(), GL_DYNAMIC_DRAW);
+
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 6, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(4 * sizeof(GLfloat)));
 
     glBindVertexArray(0);
 }
