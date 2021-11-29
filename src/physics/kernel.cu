@@ -130,29 +130,29 @@ void Simulation::stepSimulation(float dt)
     HANDLE_ERROR(cudaMalloc(&dev_lap, gridCount.x * gridCount.y * gridCount.z * sizeof(float)));
     HANDLE_ERROR(cudaMalloc(&dev_alpha_m, gridCount.x * gridCount.y * gridCount.z * sizeof(float3)));
 
-    computeVorticity << <gridDim, M_in >> > (gridCount, blockSize, dev_vorticity, dev_oldvel, dev_ccvel);
+    computeVorticity << <gridDim, M_in >> > (gridCount, sideLength, dev_vorticity, dev_oldvel, dev_ccvel);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_oldtemp, dev_vel, dev_oldvel, dev_alpha_m, dev_oldsmokedensity, dev_vorticity, externalForce);
+    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_oldvel, dev_alpha_m, dev_oldsmokedensity, dev_vorticity, externalForce);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     // Pressure Solve
-    forceIncompressibility(gridCount, blockSize, dev_vel, dev_pressure);
+    forceIncompressibility(gridCount, sideLength, dev_vel, dev_pressure);
 
-    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
+    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    //float* h_temp = (float*)malloc(sizeof(float) * 20 * 20 * 20);
-    //cudaMemcpy(h_temp, dev_temp, sizeof(float) * 20 * 20 * 20, cudaMemcpyDeviceToHost);
-    //int num = 0;
-    //for (int i = 0; i < 20 * 20 * 20; i++) {
-    //    //if (h_temp[i] != 20.0f && h_temp[i] != 0.f) printf("index: %d, value: %f\n", i, h_temp[i]);
-    //    if (h_temp[i] != 20.0f && h_temp[i] != 0.f) num++;
-    //}
-    //printf("%d\n", num);
-    //free(h_temp);
+    float* h_temp = (float*)malloc(sizeof(float) * 20 * 20 * 20);
+    cudaMemcpy(h_temp, dev_temp, sizeof(float) * 20 * 20 * 20, cudaMemcpyDeviceToHost);
+    int num = 0;
+    for (int i = 0; i < 20 * 20 * 20; i++) {
+        if (h_temp[i] != 20.0f && h_temp[i] != 0.f) printf("index: %d, value: %f\n", i, h_temp[i]);
+        if (h_temp[i] != 20.0f && h_temp[i] != 0.f) num++;
+    }
+    printf("%d\n", num);
+    free(h_temp);
 
-    smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
+    smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
     HANDLE_ERROR(cudaPeekAtLastError());

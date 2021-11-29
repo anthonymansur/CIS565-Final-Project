@@ -298,6 +298,13 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     // Backtracing 
     float3 estimated = pos - 2 * alpha_m;
 
+//
+//# if __CUDA_ARCH__>=200
+//    printf("Estimated = x: %f, y: %f, z: %f\n", estimated.x, estimated.y, estimated.z);
+//    printf("pos = x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
+//    printf("blockSize = %f\n", blockSize);
+//#endif 
+
     // Clipping
     if (estimated.x < blockSize) estimated.x = blockSize;
     if (estimated.y < blockSize) estimated.y = blockSize;
@@ -323,15 +330,20 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     __syncthreads();
 
     dtR += TEMPERATURE_ALPHA * scalarLinearInt(gridCount, blockSize, lap, estimated, 0);
+    
 
     // mass contribution
     float dtm = TAU * d_deltaM[k];
 
     d_temp[k] = -dtm + dt + dtR * 2 * DELTA_T;
     //# if __CUDA_ARCH__>=200
-    //if (d_temp[k] != 20.f) 
+    //if (d_temp[k] != 20.f) {
     //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtR = %f\n", k, d_temp[k], dtm, dt, dtR);
-
+    //}
+    //if (lap[k] != 0.0f) {
+    //    printf("lap[%d] = %f\n", k, lap[k]);
+    //}
+    //   
     //#endif 
 }
 
