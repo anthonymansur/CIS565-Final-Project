@@ -219,12 +219,12 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
     return prod;
 }
 
-// TODO: diffusion of adjacent modules not yet implemented
-__device__ float rateOfTemperatureChange(float T, float T_M, float W, float A_M, float V_M)
+// TODO: diffusion of adjacent modules not yet correctlyimplemented
+__device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
-
-    float diffusion = 0; // TODO: implement diffusion. see eq. (30)
+    float alpha = A_M * 0.001; // TODO: tuning
+    float diffusion = alpha * (T_adj - T); // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy
     float changeOfEnergy = 0 /*(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M)*/;
@@ -247,10 +247,10 @@ __device__ glm::vec3 centerOfMass(Module& module)
 }
 
 // TODO: transfer these function calls to the fluid solver
-__device__ float getMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
+__device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
     glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.mass;
+    return (1 - glm::distance(x, center) / dx) * module.deltaM;
 }
 
 __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
@@ -271,6 +271,19 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
         }
     }
     return intersects;
+}
+
+// TODO: add prototype to header file
+__device__ float getAdjacentModuleTemperatures(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
+{
+    Module& module = modules[moduleInx];
+    float temp = 0.f;
+    for (int i = module.startModule; i <= module.endModule; i++)
+    {
+        Module& adj = modules[moduleEdges[i].moduleInx];
+        temp += adj.temperature;
+    }
+    return temp / (module.endModule - module.startModule + 1);
 }
 
 /**********
@@ -327,7 +340,7 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.waterContent = 0;
 }
 
-__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, float* gridTemp)
+__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
@@ -384,12 +397,12 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
 
     /** 3. Update temperature */
     float T = getAverageValue(gridTemp, gridCount, blockSize, module.boundingMin, module.boundingMax);
-  
+    float T_adj = getAdjacentModuleTemperatures(modules, moduleEdges, index);
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
     float A_M = area; 
     float V_M = module.mass / rho;
-    float deltaT = rateOfTemperatureChange(T, T_M, W, A_M, V_M);
+    float deltaT = rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M);
 
     module.temperature += deltaT;
 
@@ -424,7 +437,7 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     for (int i = 0; i < numOfModules; i++)
     {
         if (checkModuleIntersection(modules[i], glmPos))
-            deltaM += getMassOfModuleAtPoint(modules[i], glm::vec3(pos.x, pos.y, pos.z), blockSize);
+            deltaM += getDeltaMassOfModuleAtPoint(modules[i], glmPos, blockSize);
     }
     gridOfMass[k] = deltaM;
 }

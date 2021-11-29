@@ -153,13 +153,14 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
  * 
  * @param T the temperature of the surrounding air
  * @param T_M the module's temperature
+ * @param T_adj average temperature of adjacent modules
  * @param W the water content
  * @param A_M the surface area of the module
  * @param V_M the volume of the module
  * 
  * @return the new radius
  */
-__device__ float rateOfTemperatureChange(float T, float T_M, float W, float A_M, float V_M);
+__device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M);
 
 /**
  * @brief Gets the rate of water change for a module given its change in mass
@@ -181,7 +182,7 @@ __device__ glm::vec3 centerOfMass(Module& module);
 
 // TODO: transfer these function calls to the fluid solver
 /**
- * @brief Get the mass of a module at a given point in space, assuming this point 
+ * @brief Get the change in mass of a module at a given point in space, assuming this point 
  * intersects with the module's bounding box.
  * 
  * @param module the module
@@ -190,7 +191,7 @@ __device__ glm::vec3 centerOfMass(Module& module);
  *
  * @return the mass
  */
-__device__ float getMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
+__device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
 
 /**
  * @brief Get the water content of a module at a given point in space, assuming this point 
@@ -237,7 +238,7 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
  * @param modules device pointer to the modules
  */
 // TODO: update params
-__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, float* gridTemp);
+__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp);
 
 /** TODO: add description */
 __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass);
