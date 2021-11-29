@@ -186,7 +186,7 @@ void mainLoop()
         glUseProgram(program[PROG]);
 
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 1, GL_UNSIGNED_SHORT, 0);
+        glDrawElements(GL_TRIANGLES, 1, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
     }
@@ -232,15 +232,12 @@ void initShaders(GLuint* program) {
 
     //glBindVertexArray(VAO);
 
-    // does this need to be changed?
-    const GLfloat value4 = camera.projection[0][0];
-    const GLfloat value3 = camera.position[0];
 
     if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
-        glUniformMatrix4fv(location, 1, GL_FALSE, &value4);
+        glUniformMatrix4fv(location, 1, GL_FALSE, &camera.projection[0][0]);
     }
     if ((location = glGetUniformLocation(program[PROG], "u_cameraPos")) != -1) {
-        glUniform3fv(location, 1, &value3);
+        glUniform3fv(location, 1, &camera.position[0]);
     }
 }
 
@@ -265,6 +262,7 @@ void initVAO() {
         }
         // fill index buffer
         if (g.type == RECT) {
+            // ground
             for (int i = 1; i <= g.num_verts - 3; i++) {
                 indices.push_back(0);
                 indices.push_back(i);
@@ -283,17 +281,28 @@ void initVAO() {
             indices.push_back(1);
         }
         else if (g.type == BRANCH) {
-            // TODO
+            // top circle
+            for (int i = 1; i < 6; i++) { //change 6 to sect number
+                indices.push_back(0);
+                indices.push_back(i);
+                indices.push_back(i + 1);
+            }
+            //middle
+            for (int i = 1; i < 6; i++) {
+                indices.push_back(i);
+                indices.push_back(i + 1);
+                indices.push_back(i + 6); // some offset to correspond to number of bottom verts
+            }
+            //bottom circle
+
+
         }
         else if (g.type == LEAF) {
+            // triangle leaves for now
             indices.push_back(0);
             indices.push_back(1);
             indices.push_back(2);
         }
-    }
-
-    for (int i = 0; i < indices.size(); i++) {
-        std::cout << indices[i] << std::endl;
     }
 
     GLfloat* verticesData = vertices.data();
@@ -311,7 +320,8 @@ void initVAO() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indexData, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); //maybe change
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); //maybe change
+    glEnableVertexAttribArray(0);
 }
 
 // GLFW Callbacks
