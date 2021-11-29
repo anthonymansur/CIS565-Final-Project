@@ -17,34 +17,21 @@
 
 class Camera {
 public:
-	Camera();
+	Camera(float aspectRatio);
 	~Camera();
 
-	const float fovy = (float)(PI / 4);
-	const float zNear = 0.10f;
-	const float zFar = 100.0f;
-	int width = 1280;
-	int height = 720;
-	
-	// controls
 	bool leftMousePressed;
 	bool rightMousePressed;
-	double lastX;
-	double lastY;
-	float theta;
-	float phi;
-	float zoom;
-	glm::mat4 projection;
+	double previousX, previousY;
+
+	// controls
+	float r, theta, phi;
+
+	glm::mat4 view, proj, viewProj;
 	glm::vec3 position;
 
+	void UpdateOrbit(float deltaX, float deltaY, float deltaZ);
 	void updateCamera(GLuint* program);
 	void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 	void mousePositionCallback(GLFWwindow* window, double xpos, double ypos, GLuint* program);
-
-	glm::ivec2 resolution;
-	glm::vec3 lookAt;
-	glm::vec3 view;
-	glm::vec3 up;
-	glm::vec3 right;
-	glm::vec2 pixelLength;
 };

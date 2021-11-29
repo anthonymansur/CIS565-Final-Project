@@ -25,7 +25,7 @@ GLFWwindow* window;
 int width = 1280;
 int height = 720;
 
-Camera camera = Camera();
+Camera camera = Camera(width / (height * 1.f));
 Terrain terrain = Terrain();
 Cylinder branch = Cylinder(0.5, 0.3, 3.0, 36, 8);
 std::vector<Geom> geoms;
@@ -245,7 +245,7 @@ void initShaders(GLuint* program) {
     //glBindVertexArray(VAO);
 
     if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
-        glUniformMatrix4fv(location, 1, GL_FALSE, &camera.projection[0][0]);
+        glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
     }
     if ((location = glGetUniformLocation(program[PROG], "u_cameraPos")) != -1) {
         glUniform3fv(location, 1, &camera.position[0]);
