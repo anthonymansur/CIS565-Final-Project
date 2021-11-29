@@ -195,7 +195,7 @@ void mainLoop()
         glUseProgram(program[PROG]);
 
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 1, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
         glfwSwapBuffers(window);
     }
@@ -253,7 +253,7 @@ void initShaders(GLuint* program) {
 void initVAO() {
     
     std::vector<GLfloat> vertices;
-    std::vector<GLfloat> indices;
+    std::vector<GLushort> indices;
     int offset = 0;
 
     for (Geom &g : geoms) {
@@ -314,9 +314,6 @@ void initVAO() {
         }
     }
 
-    GLfloat* verticesData = vertices.data();
-    GLfloat* indexData = indices.data();
-
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &IBO);
@@ -324,10 +321,10 @@ void initVAO() {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), verticesData, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indexData, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * indices.size(), indices.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); //maybe change
     glEnableVertexAttribArray(0);
