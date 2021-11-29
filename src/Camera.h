@@ -31,7 +31,7 @@ public:
 	glm::vec3 position;
 
 	void UpdateOrbit(float deltaX, float deltaY, float deltaZ);
-	void updateCamera(GLuint* program);
+	void updateCamera(GLuint* program, int size = 1);
 	void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 	void mousePositionCallback(GLFWwindow* window, double xpos, double ypos, GLuint* program);
 };

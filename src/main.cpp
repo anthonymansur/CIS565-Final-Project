@@ -10,6 +10,8 @@
 #include <cuda_gl_interop.h>
 #include <glm/gtx/transform.hpp>
 
+#include "utilityCore.hpp"
+#include "glslUtility.hpp"
 #include "physics/kernel.h"
 #include "Camera.h"
 #include "Terrain.h"
@@ -30,18 +32,22 @@ int height = 720;
 Camera camera = Camera(width / (height * 1.f));
 Terrain terrain = Terrain();
 GLuint program[2];
-const char* attributeLocations[] = { "Position" };
-GLuint positionLocation = 1;
-GLuint VAO;
-GLuint IBO;
-GLuint VBO;
+const char* attributeLocations_terrain[] = { "Position" };
+GLuint VAO_terrain;
+GLuint IBO_terrain;
+GLuint VBO_terrain;
 
-const unsigned int PROG = 0;
+const char* attributeLocations_branches[] = { "Branch" };
+GLuint VAO_branches;
+GLuint VBO_branches;
+
+const unsigned int PROG_terrain = 0;
+const unsigned int PROG_branches = 1;
 
 // functions
 bool init(int argc, char** argv);
 void initShaders(GLuint* program);
-void initVAO();
+void initVAO(Terrain* terrain);
 void mainLoop();
 void runCUDA();
 
@@ -58,9 +64,9 @@ int main(int argc, char* argv[])
     {
         Terrain terrain;
         camera.UpdateOrbit(0, -25, -15);
-        camera.updateCamera(&program[PROG]);
-        // TODO: generate terrain
+        camera.updateCamera(program, 2);
         Simulation::initSimulation(&terrain);
+        // TODO: generate terrain
         mainLoop();
         return 0;
     }
@@ -128,13 +134,8 @@ bool init(int argc, char** argv)
         return false;
     }
 
-    // Initialize shaders
-
-    initShaders(program);
-    initVAO();
-
-    // camera setup
-    camera.updateCamera(program);
+    // Initialize drawing state
+    initVAO(&terrain);
 
     // **CUDA OpenGL Interoperability**
 
@@ -144,6 +145,12 @@ bool init(int argc, char** argv)
 
     // register buffer objects here
     // TODO: impelment
+    cudaGLRegisterBufferObject(VBO_branches);
+
+    // camera setup
+    camera.updateCamera(program);
+
+    initShaders(program);
 
     // GL enables go here 
     //glEnable(GL_DEPTH_TEST);
@@ -185,9 +192,9 @@ void mainLoop()
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
         glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
 
-        glUseProgram(program[PROG]);
+        glUseProgram(program[PROG_terrain]);
 
-        glBindVertexArray(VAO);
+        glBindVertexArray(VAO_terrain);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
         glfwSwapBuffers(window);
@@ -199,6 +206,8 @@ void mainLoop()
 void runCUDA()
 {
     /** Map buffer objects between CUDA and GL */
+    float* dptrBranches = NULL;
+    cudaGLMapBufferObject((void**)&dptrBranches, VBO_branches);
 
     /** Timing analysis? */
     // cudaEvent_t start, stop;
@@ -208,6 +217,7 @@ void runCUDA()
     // cudaEventRecord(start);
 
     // // What you want to time goes here
+    Simulation::stepSimulation(DT);
 
     // cudaEventRecord(stop);
 
@@ -218,37 +228,41 @@ void runCUDA()
     // std::cout << "FPS: " << FIXED_FLOAT(1 / milliseconds) << std::endl;
 
     /** Unmap buffer objects */
-    // cudaGLUnmapBufferObject(XXX);
-
-    Simulation::stepSimulation(DT);
+    cudaGLUnmapBufferObject(VBO_branches);
 }
 
 void initShaders(GLuint* program) {
     GLuint location;
-    program[PROG] = glslUtility::createProgram(
-        "shaders/shader.vert.",
+    program[PROG_terrain] = glslUtility::createProgram(
+        "shaders/shader.vert",
         /*"shaders/graphics.geom.glsl",*/
-        "shaders/shader.frag", attributeLocations, 1);
-    glUseProgram(program[PROG]);
+        "shaders/shader.frag", attributeLocations_terrain, 1);
+    program[PROG_branches] = glslUtility::createProgram(
+        "shaders/branches.vert.glsl",
+        "shaders/branches.geom.glsl",
+        "shaders/branches.frag.glsl", attributeLocations_branches, 1);
+
+    glUseProgram(program[PROG_terrain]);
 
     //glBindVertexArray(VAO);
 
-    if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
+    if ((location = glGetUniformLocation(program[PROG_terrain], "u_projMatrix")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
     }
-    if ((location = glGetUniformLocation(program[PROG], "u_cameraPos")) != -1) {
+    if ((location = glGetUniformLocation(program[PROG_terrain], "u_cameraPos")) != -1) {
         glUniform3fv(location, 1, &camera.position[0]);
     }
     
     //glm::mat4 model = glm::rotate(90.f, glm::vec3(1.f, 0.f, 0.f));
     glm::mat4 model = glm::mat4(1.f);
-    if ((location = glGetUniformLocation(program[PROG], "u_model")) != -1) {
+    if ((location = glGetUniformLocation(program[PROG_terrain], "u_model")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE , &model[0][0]);
     }
 }
 
-void initVAO() {
+void initVAO(Terrain *terrain) {
     
+    /** Terrain */
     GLfloat vertices[] =
     {
         -10.0f, 0.0f, -10.0f, // bottom left
@@ -262,20 +276,48 @@ void initVAO() {
         0, 1, 2, 0, 2, 3
     };
 
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &IBO);
+    glGenVertexArrays(1, &VAO_terrain);
+    glGenBuffers(1, &VBO_terrain);
+    glGenBuffers(1, &IBO_terrain);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(VAO_terrain);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_terrain);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO_terrain);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); //maybe change
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); 
     glEnableVertexAttribArray(0);
+
+    /** Branches */
+    std::unique_ptr<GLfloat[]> branches{ new GLfloat[8 * (terrain->edges.size())] };
+
+    for (int i = 0; i < (terrain->edges.size()); i++)
+    {
+        branches[8 * i + 0] = 0.0f;
+        branches[8 * i + 1] = 0.0f;
+        branches[8 * i + 2] = 0.0f;
+        branches[8 * i + 3] = 0.0f;
+        branches[8 * i + 4] = 0.0f;
+        branches[8 * i + 5] = 0.0f;
+        branches[8 * i + 6] = 0.0f;
+        branches[8 * i + 7] = 0.0f;
+    }
+
+
+    glGenVertexArrays(1, &VAO_branches);
+    glGenBuffers(1, &VBO_branches);
+    // TODO: indices?
+
+    glBindVertexArray(VAO_branches);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_branches);
+    glBufferData(GL_ARRAY_BUFFER, 8 * (terrain->edges.size()) * sizeof(GLfloat), branches.get(), GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 6, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+    glBindVertexArray(0);
 }
 
 // GLFW Callbacks
