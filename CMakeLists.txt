@@ -69,7 +69,12 @@ set(headers
     src/tree/Module.h
     src/tree/Tree.h
     src/tree/TruncatedCone.h
-    src/under-development/Terrain.h
+    src/Camera.h
+    src/Entity.h
+    src/cudaMat4.hpp
+    src/glslUtility.hpp
+    src/utilityCore.hpp
+    src/Triangle.h
     )
 
 set(sources
@@ -80,7 +85,10 @@ set(sources
     src/tree/Module.cpp
     src/tree/Tree.cpp
     src/tree/TruncatedCone.cpp
-    src/under-development/Terrain.cpp 
+    src/Camera.cpp
+    src/Entity.cpp
+    src/glslUtility.cpp
+    src/utilityCore.cpp
     )
 
 list(SORT headers)
