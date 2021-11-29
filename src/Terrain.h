@@ -12,7 +12,5 @@ public:
     std::vector<Node> nodes;
     std::vector<Edge> edges;
     std::vector<Module> modules;
-
-    Geom grass;
-    Geom dirt;
+    std::vector<ModuleEdge> moduleEdges;
 };
