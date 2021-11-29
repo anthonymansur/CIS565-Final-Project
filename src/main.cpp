@@ -34,6 +34,7 @@ GLuint VAO;
 GLuint PBO;
 GLuint IBO;
 GLuint VBO;
+GLuint displayImage;
 int num_triangles = 0;
 
 const unsigned int PROG = 0;
@@ -132,6 +133,9 @@ bool init(int argc, char** argv)
     initShaders(program);
     initVAO();
 
+    // camera setup
+    camera.updateCamera(program);
+
     // **CUDA OpenGL Interoperability**
 
     // Default to device ID 0. If you have more than one PGU and want to test a non-default one,
@@ -141,10 +145,8 @@ bool init(int argc, char** argv)
     // register buffer objects here
     // TODO: impelment
 
-    // camera setup
-    camera.updateCamera(program);
-
     // GL enables go here 
+    //glEnable(GL_DEPTH_TEST);
 
     return true;
 }
@@ -180,8 +182,15 @@ void mainLoop()
         glfwSetWindowTitle(window, ss.str().c_str());
 
         // GL commands go here for visualization
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
+        glBindTexture(GL_TEXTURE_2D, displayImage);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
         glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, displayImage);
 
         glUseProgram(program[PROG]);
 

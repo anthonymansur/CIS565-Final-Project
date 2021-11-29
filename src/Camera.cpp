@@ -21,7 +21,7 @@ void Camera::updateCamera(GLuint* program) {
 	position += lookAt;
 
 	projection = glm::perspective(fovy, float(width) / float(height), zNear, zFar);
-	glm::mat4 view = glm::lookAt(position, lookAt, glm::vec3(0, 0, -1));
+	glm::mat4 view = glm::lookAt(position, lookAt, glm::vec3(0, 1, 0));
 	projection = projection * view;
 
 	GLint location;
