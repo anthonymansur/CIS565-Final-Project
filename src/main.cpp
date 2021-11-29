@@ -195,7 +195,7 @@ void mainLoop()
         glUseProgram(program[PROG]);
 
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 1, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
     }
@@ -240,7 +240,6 @@ void initShaders(GLuint* program) {
     glUseProgram(program[PROG]);
 
     //glBindVertexArray(VAO);
-
 
     if ((location = glGetUniformLocation(program[PROG], "u_projMatrix")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &camera.projection[0][0]);
