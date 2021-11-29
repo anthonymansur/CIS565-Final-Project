@@ -142,15 +142,15 @@ void Simulation::stepSimulation(float dt)
     tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    float* h_temp = (float*)malloc(sizeof(float) * 20 * 20 * 20);
-    cudaMemcpy(h_temp, dev_temp, sizeof(float) * 20 * 20 * 20, cudaMemcpyDeviceToHost);
-    int num = 0;
-    for (int i = 0; i < 20 * 20 * 20; i++) {
-        if (h_temp[i] != 20.0f && h_temp[i] != 0.f) printf("index: %d, value: %f\n", i, h_temp[i]);
-        if (h_temp[i] != 20.0f && h_temp[i] != 0.f) num++;
-    }
-    printf("%d\n", num);
-    free(h_temp);
+    //float* h_temp = (float*)malloc(sizeof(float) * 20 * 20 * 20);
+    //cudaMemcpy(h_temp, dev_temp, sizeof(float) * 20 * 20 * 20, cudaMemcpyDeviceToHost);
+    //int num = 0;
+    //for (int i = 0; i < 20 * 20 * 20; i++) {
+    //    //if (h_temp[i] != 20.0f && h_temp[i] != 0.f) printf("index: %d, value: %f\n", i, h_temp[i]);
+    //    if (h_temp[i] != 20.0f && h_temp[i] != 0.f) num++;
+    //}
+    //printf("%d\n", num);
+    //free(h_temp);
 
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
