@@ -12,6 +12,7 @@
 
 // kernel size
 int numOfModules;
+int numOfEdges;
 dim3 threadsPerBlock(blockSize);
 
 // buffers to hold in our graph data
@@ -50,6 +51,7 @@ void Simulation::initSimulation(Terrain* terrain)
 {
     m_terrain = terrain;
     numOfModules = terrain->modules.size();
+    numOfEdges = terrain->edges.size();
     int numOfGrids = gridCount.x * gridCount.y * gridCount.z;
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
@@ -194,7 +196,29 @@ void Simulation::endSimulation()
 /********************
 * copyBranchesToVBO *
 *********************/
+__global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edges)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    Edge& edge = edges[index];
+    Node& fromNode = nodes[edge.fromNode];
+    Node& toNode = nodes[edge.toNode];
+
+    vbo[8 * index + 0] = fromNode.position.x;
+    vbo[8 * index + 1] = fromNode.position.y;
+    vbo[8 * index + 2] = fromNode.position.z;
+    vbo[8 * index + 3] = fromNode.radius;
+
+    vbo[8 * index + 4] = toNode.position.x;
+    vbo[8 * index + 5] = toNode.position.y;
+    vbo[8 * index + 6] = toNode.position.z;
+    vbo[8 * index + 7] = toNode.radius;
+}
+
 void Simulation::copyBranchesToVBO(float* vbodptr_branches)
 {
     // TODO: implement
+    dim3 fullBlocksPerGrid((numOfEdges + blockSize - 1) / blockSize);
+    kernUpdateVBOBranches << <fullBlocksPerGrid, blockSize >>> (numOfEdges, vbodptr_branches, dev_nodes, dev_edges);
 }
