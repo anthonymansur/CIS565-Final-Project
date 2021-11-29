@@ -68,6 +68,7 @@ set(headers
     src/utilityCore.hpp
     src/main.hpp
     src/cylinder.hpp
+    src/sceneStructs.h
     )
 
 set(sources

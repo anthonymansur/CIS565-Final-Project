@@ -21,7 +21,7 @@
 GLuint positionLocation = 0;
 GLuint colorLocation = 1;
 GLuint texcoordsLocation = 2;
-const char* attributeLocations[] = { "Position", "Color", "Texcoords"};
+const char* attributeLocations[] = { "Position" };
 
 GLuint PBO;
 GLuint vboID[3];

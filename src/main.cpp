@@ -6,6 +6,7 @@
 #include "stb_image.h"
 #include "main.hpp"
 #include "cylinder.hpp"
+#include "sceneStructs.h"
 #include <iostream>
 #include <filesystem>
 
@@ -15,10 +16,13 @@
 // variables
 std::string deviceName;
 GLFWwindow* window;
-Cylinder tree = Cylinder(1.0f, 0.2f, 3.0f, 36, 8);
+Cylinder tree(1.0f, 0.2f, 3.0f, 36, 8);
+
+Geom geom;
 
 const float DT = 0.2f;
 const int N_FOR_VIS = 2;
+
 
 int main(int argc, char* argv[])
 {
@@ -39,6 +43,15 @@ int main(int argc, char* argv[])
 
 bool init(int argc, char** argv)
 {
+    //TESTING
+    Point pt0, pt1, pt2;
+    pt0.pos = glm::vec3(-5.0f, 0.0f, 0.0f);
+    pt1.pos = glm::vec3(5.0f, 0.0f, 0.0f);
+    pt2.pos = glm::vec3(5.0f, 0.0f, -10.0f);
+    Triangle triangle(pt0, pt1, pt2);
+    geom.triangles.push_back(triangle);
+
+
     cudaDeviceProp deviceProp;
     int gpuDevice = 0;
     int device_count = 0;
@@ -126,14 +139,44 @@ bool init(int argc, char** argv)
 void initVAO() {
 
     // pos (3), color (3), tex (2)
-    GLfloat vertices[] = {
+    /*GLfloat vertices[] = {
         -5.f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 
         -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 
         5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 
         5.0f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f 
     };
 
+    GLushort indices[] = { 0, 1, 2, 2, 0, 3 };*/
+
+    GLfloat vertices[] = {
+        -5.f, 0.0f, -10.0f,
+        -5.0f, 0.0f, 0.0f,
+        5.0f, 0.0f, 0.0f,
+    };
+
     GLushort indices[] = { 0, 1, 2, 2, 0, 3 };
+
+    // TESTING
+   /* std::vector<GLfloat> vertices;
+    std::vector<GLushort> indices;
+
+    for (Triangle& t : geom.triangles) {
+        vertices.push_back(t.p1.pos.x);
+        vertices.push_back(t.p1.pos.y);
+        vertices.push_back(t.p1.pos.z);
+        vertices.push_back(t.p2.pos.x);
+        vertices.push_back(t.p2.pos.y);
+        vertices.push_back(t.p2.pos.z);
+        vertices.push_back(t.p3.pos.x);
+        vertices.push_back(t.p3.pos.y);
+        vertices.push_back(t.p3.pos.z);
+    }
+
+    indices = { 0, 1, 2 };
+
+    GLfloat* verticesData = vertices.data();
+    GLushort* indexData = indices.data();*/
+
     //glGenBuffers(3, vboID);
     unsigned int VBO, idx;
     glGenVertexArrays(1, &VAO);
@@ -149,16 +192,16 @@ void initVAO() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glEnableVertexAttribArray(0);
 
-    //color
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+    ////color
+    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    //glEnableVertexAttribArray(1);
 
-    // texcoord
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
+    //// texcoord
+    //glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    //glEnableVertexAttribArray(2);
     
    // glBindBuffer(GL_ARRAY_BUFFER, 0);
    // glBindVertexArray(0);
@@ -183,7 +226,7 @@ void initShaders(GLuint* program) {
     program[PROG] = glslUtility::createProgram(
         "shaders/graphics.vert.glsl",
         /*"shaders/graphics.geom.glsl",*/
-        "shaders/graphics.frag.glsl", attributeLocations, 3);
+        "shaders/graphics.frag.glsl", attributeLocations, 1);
     glUseProgram(program[PROG]);
 
     //glBindVertexArray(VAO);
@@ -345,26 +388,15 @@ void mainLoop()
         glUseProgram(program[PROG]);
 
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, 0);
 
-        glBindVertexArray(treeVAO);
-        drawBranch();
+        /*glBindVertexArray(treeVAO);
+        drawBranch();*/
 
         glfwSwapBuffers(window);
 
         glUseProgram(0);
         glBindVertexArray(0);
-
-        /*glUseProgram(program[PROG]);
-        glBindVertexArray(VAO);
-        glPointSize((GLfloat)pointSize);
-        glDrawElements(GL_TRIANGLES, N_FOR_VIS + 1, GL_UNSIGNED_INT, 0);
-        glPointSize(1.0f);
-
-        glUseProgram(0);
-        glBindVertexArray(0);*/
-
-
     }
     glfwDestroyWindow(window);
     glfwTerminate();
