@@ -148,7 +148,7 @@ bool init(int argc, char** argv)
     cudaGLRegisterBufferObject(VBO_branches);
 
     // camera setup
-    camera.updateCamera(program);
+    camera.updateCamera(program, 2);
 
     initShaders(program);
 
@@ -265,6 +265,12 @@ void initShaders(GLuint* program) {
     glm::mat4 model = glm::mat4(1.f);
     if ((location = glGetUniformLocation(program[PROG_terrain], "u_model")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE , &model[0][0]);
+    }
+
+    glUseProgram(program[PROG_branches]);
+
+    if ((location = glGetUniformLocation(program[PROG_branches], "u_projMatrix")) != -1) {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
     }
 }
 
