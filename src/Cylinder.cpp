@@ -7,6 +7,7 @@ Cylinder::Cylinder(float base, float top, float ht, int sect, int stack) {
 	this->height = ht;
 	this->sectorCount = sect;
 	this->stackCount = stack;
+    stride = 32;
 
 	buildVertices();
 }

@@ -199,6 +199,7 @@ void mainLoop()
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, (unsigned int)branch.indices.size(), GL_UNSIGNED_SHORT, 0);
+        //glDrawElements(GL_TRIANGLES, (unsigned int)branch.indices.size(), GL_UNSIGNED_INT, branch.indices.data());
 
         glfwSwapBuffers(window);
     }
