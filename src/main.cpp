@@ -196,6 +196,21 @@ void runCUDA()
     // cudaGLUnmapBufferObject(XXX);
 
     Simulation::stepSimulation(DT);
+    //renderInitialCamera();
+    ////renderScene ();
+    ////renderSmoke ();
+    //unsigned int cameraAxis;
+    //glm::vec3 campos;
+    //camera.getPos(campos);
+    //if (fabs(campos[0]) >= fabs(campos[1]) && fabs(campos[0]) >= fabs(campos[2]))
+    //    cameraAxis = 0;
+    //else if (fabs(campos[1]) >= fabs(campos[0]) && fabs(campos[1]) >= fabs(campos[2]))
+    //    cameraAxis = 1;
+    //else cameraAxis = 2;
+    ////cout << campos << "main ax " << cameraAxis << endl;
+    //Simulation::render(cameraAxis);
+    ////glFlush();
+    ////glutSwapBuffers();
 }
 
 // GLFW Callbacks

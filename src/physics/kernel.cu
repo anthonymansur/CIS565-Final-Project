@@ -1,5 +1,7 @@
 #include "kernel.h"
 
+#define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
 /*****************
 * Configuration *
 *****************/
@@ -41,6 +43,121 @@ float* dev_oldsmokedensity;
 float* dev_deltaM;
 
 Terrain* m_terrain;
+
+// Smoke rendering variables
+float* smokeQuadsPositions;
+unsigned int* smokeIndexes;
+float* smokeQuadsColors;
+GLuint smokeQuadVBO;
+GLuint smokeQuadIndexBO;
+float3 externalForce;
+GLuint smokeColorBufferObj = 0;
+
+int flatten(const int i_x, const int i_y, const int i_z) {
+    return i_x + i_y * gridCount.x + i_z * gridCount.y * gridCount.z;
+}
+
+void Simulation::initSmokeQuads() {
+    int nflat = gridCount.x * gridCount.y * gridCount.z;
+    smokeQuadsPositions = new float[3 * 4 * 3 * nflat];
+    smokeQuadsColors = new float[4 * 4 * nflat];
+    smokeIndexes = new unsigned int[4 * nflat];
+    for (unsigned int x = 0; x < gridCount.x; x++) {
+        for (unsigned int y = 0; y < gridCount.y; y++) {
+            for (unsigned int z = 0; z < gridCount.z; z++) {
+                std::array<float, 12> vertexes = {
+                    x * sideLength, y * sideLength, z * sideLength,
+                    x * sideLength, y * sideLength, (z + 1) * sideLength,
+                    x * sideLength, (y + 1) * sideLength, (z + 1) * sideLength,
+                    x * sideLength, (y + 1) * sideLength, z * sideLength
+                };
+                std::copy(vertexes.begin(), vertexes.end(),
+                    smokeQuadsPositions + 12 * flatten(x, y, z));
+            }
+        }
+    }
+    for (unsigned int x = 0; x < gridCount.x; x++) {
+        for (unsigned int y = 0; y < gridCount.x; y++) {
+            for (unsigned int z = 0; z < gridCount.z; z++) {
+                std::array<float, 12> vertexes = {
+                    x * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, y * sideLength, (z + 1) * sideLength,
+                    x * sideLength, y * sideLength, (z + 1) * sideLength
+                };
+                std::copy(vertexes.begin(), vertexes.end(),
+                    smokeQuadsPositions + 1 * 4 * 3 * nflat + 12 * flatten(x, y, z));
+            }
+        }
+    }
+    for (unsigned int x = 0; x < gridCount.x; x++) {
+        for (unsigned int y = 0; y < gridCount.y; y++) {
+            for (unsigned int z = 0; z < gridCount.z; z++) {
+                std::array<float, 12> vertexes = {
+                    x * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, (y + 1) * sideLength, z * sideLength,
+                    x * sideLength, (y + 1) * sideLength, z * sideLength
+                };
+                std::copy(vertexes.begin(), vertexes.end(),
+                    smokeQuadsPositions + 2 * 4 * 3 * nflat + 12 * flatten(x, y, z));
+            }
+        }
+    }
+
+
+    glGenBuffers(1, &smokeQuadVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, smokeQuadVBO);
+    glBufferData(GL_ARRAY_BUFFER, 3 * nflat * 4 * 3 * sizeof(float), smokeQuadsPositions, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glGenBuffers(1, &smokeQuadIndexBO);
+    for (int i = 0; i < 4 * nflat; i++) smokeIndexes[i] = i;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, smokeQuadIndexBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * nflat * sizeof(unsigned int), smokeIndexes, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void Simulation::renderSmokeQuads(unsigned int cameraAxis) {
+    int nflat = gridCount.x * gridCount.y * gridCount.z;
+    glDisable(GL_CULL_FACE);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
+    glBindBuffer(GL_ARRAY_BUFFER, smokeQuadVBO);
+    glVertexPointer(3, GL_FLOAT, 0, BUFFER_OFFSET(cameraAxis * 4 * 3 * nflat * sizeof(float)));
+    glBindBuffer(GL_ARRAY_BUFFER, smokeColorBufferObj);
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, smokeQuadIndexBO);
+    glDrawElements(GL_QUADS, 4 * nflat, GL_UNSIGNED_INT, (void*)0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+}
+
+void Simulation::renderExternalForce(float3 externalForce) {
+    glBegin(GL_LINES);
+    glColor3f(1, 0, 0);
+    glVertex3f(0, 0, 0);
+    glVertex3fv((GLfloat*)&externalForce);
+    glEnd();
+}
+
+void Simulation::render(unsigned int cameraAxis) {
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glScalef(2, 2, 2);
+    glTranslatef(-gridSize.x / 2, -gridSize.y / 2, -gridSize.z / 2);
+    //if (gridEnabled) renderGrid();
+    //if (raysEnabled) renderLightRays();
+    renderSmokeQuads(cameraAxis);
+    glPopMatrix();
+
+    //renderExternalForce();
+}
 
 /******************
 * initSimulation *
@@ -94,6 +211,13 @@ void Simulation::initSimulation(Terrain* terrain)
 
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
 
+    glGenBuffers(1, &smokeColorBufferObj);
+    glBindBuffer(GL_ARRAY_BUFFER, smokeColorBufferObj);
+
+    glBufferData(GL_ARRAY_BUFFER, numOfGrids * 4 * 4 * sizeof(GLubyte), 0, GL_STREAM_DRAW);
+    cudaGLRegisterBufferObject(smokeColorBufferObj);
+    initSmokeQuads();
+
     cudaDeviceSynchronize();
 }
 
@@ -123,6 +247,9 @@ void Simulation::stepSimulation(float dt)
     // update drag forces (wind)
     // update smoke density (qs), water vapor (qv), condensed water (qc),
     // and rain (qc)
+    uchar4* d_out = 0;
+    cudaGLMapBufferObject((void**)&d_out, smokeColorBufferObj);
+
     float* dev_lap;
     float3* dev_alpha_m;
     float3 externalForce = { 0.f, 0.f, 0.f };
@@ -160,6 +287,8 @@ void Simulation::stepSimulation(float dt)
 
     HANDLE_ERROR(cudaFree(dev_alpha_m));
     HANDLE_ERROR(cudaFree(dev_lap));
+
+    cudaGLUnmapBufferObject(smokeColorBufferObj);
 
     // Ping-pong buffers
     std::swap(dev_temp, dev_oldtemp);

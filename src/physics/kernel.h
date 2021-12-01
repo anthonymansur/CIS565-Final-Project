@@ -2,6 +2,11 @@
 #include<cuda.h>
 #define _USE_MATH_DEFINES // Keep above math.h import
 #include <math.h> 
+#include <array>
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include <cuda_gl_interop.h>
 
 #include "../Terrain.h"
 #include "module-combustion/module.h"
@@ -36,11 +41,21 @@ __device__ float EVAP = 0.5362f;                // module water to mass ratio
 __device__ float SMOKE_MASS = 16.f;             // smoke mass contribution coefficient
 __device__ float SMOKE_WATER = 200.f;           // smoke water contribution coefficient
 __device__ float TAU = 200.f;                   // temperature change per pass of wood combusted
-
+__device__ int SMOKE_RAY_SQRT_COUNT = 60;
+__device__ float SMOKE_EXTINCTION_COEFF = 15e1;
+__device__ float SMOKE_ALBEDO = 0.7f;
+__device__ float3 SMOKE_LIGHT_DIR = { 1,0,0 };
+__device__ float3 SMOKE_LIGHT_POS = { -1,0,0 };
+__device__ float SMOKE_LIGHT_RADIANCE = 5e0;
 
 namespace Simulation
 {
+    void initSmokeQuads();
+    void renderSmokeQuads(unsigned int cameraAxis);
+    void renderExternalForce(float3 externalForce);
+    void render(unsigned int cameraAxis);
     void initSimulation(Terrain* terrain);
     void stepSimulation(float dt);
     void endSimulation();
+
 }

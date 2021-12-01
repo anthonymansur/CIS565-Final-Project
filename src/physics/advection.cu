@@ -9,8 +9,6 @@
 
 int blocksNeeded(int N_i, int M_i) { return (N_i + M_i - 1) / M_i; }
 
-__device__ unsigned char clip(int n) { return n > 255 ? 255 : (n < 0 ? 0 : n); }
-
 __device__ int idxClip(int idx, int idxMax) {
     return idx > (idxMax - 1) ? (idxMax - 1) : (idx < 0 ? 0 : idx);
 }
@@ -377,11 +375,20 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
     // Contribution to smoke density due to advection of fluid
     float ds = scalarLinearInt(gridCount, blockSize, d_oldsmoke, estimated, 0.f);
 
+    if (d_delta_m[k] > 0) d_delta_m[k] *= -1.0f;
+
     // Contribution to smoke density due to mass loss and evaporation (d_delta_m is negative)
     ds -= (SMOKE_MASS * d_delta_m[k]) + (EVAP * SMOKE_WATER * d_delta_m[k]);
 
     __syncthreads();
     d_smoke[k] = ds;
+# if __CUDA_ARCH__>=200
+    if (d_smoke[k] != 0.f) {
+        printf("d_smoke[%d] = %f\n", k, d_smoke[k]);
+    }
+
+
+#endif 
 }
 
 //void kernelLauncher(
