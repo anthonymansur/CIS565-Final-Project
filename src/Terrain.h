@@ -2,12 +2,20 @@
 #include "TerrainStructs.h"
 #include "Triangle.h"
 #include <vector>
+#include <sstream>
+#include <fstream>
 
 class Terrain
 {
 public:
     Terrain();
     ~Terrain();
+
+    bool loadScene(std::string filename);
+
+    float precipitation;
+    float temperature;
+    float ecosystemSize;
 
     std::vector<Node> nodes;
     std::vector<Edge> edges;

@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
     if (init(argc, argv))
     {
         Terrain terrain;
+        terrain.loadScene("../scenes/scene1.ply");
         camera.UpdateOrbit(0, -25, -15);
         camera.updateCamera(program, 2);
         Simulation::initSimulation(&terrain);
