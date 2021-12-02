@@ -46,6 +46,7 @@ struct Module
     float temperature;
     float mass, deltaM; 
     glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
+    glm::vec3 centerOfMass;
     float startArea; // lateral surface area before combustion
     float moduleConstant;
     float waterContent;

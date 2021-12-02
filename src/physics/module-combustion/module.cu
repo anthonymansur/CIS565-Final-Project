@@ -64,7 +64,8 @@ __device__ const float c_M = 2.5;
  * @brief density of wood
  * @note units: 1 kg m^-3, deciduous = 660, conifer = 420, shrub = 300
  */
-__device__ const float rho = 500;
+__device__ const float rho = 500; // WARNING: see note below.
+// NOTE: center of mass calculations currently assumes this to be equal to 500.
 
 /**
  * @brief Temperature diffusion coeff. (wood)

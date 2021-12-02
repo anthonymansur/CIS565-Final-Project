@@ -17,6 +17,8 @@ public:
     float temperature;
     float ecosystemSize;
 
+    float gridSideLength;
+
     std::vector<Node> nodes;
     std::vector<Edge> edges;
     std::vector<Module> modules;

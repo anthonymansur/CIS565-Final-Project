@@ -8,6 +8,9 @@
 #include <chrono>
 #include <iomanip>
 
+#define _USE_MATH_DEFINES // Keep above math.h import
+#include <math.h> 
+
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 
 
@@ -50,11 +53,31 @@ void tokenize(std::string const& str, const char delim,
 	}
 }
 
+float coneMass(float density, float r0, float r1, float l)
+{
+  return density * (float)(M_PI / 3) * l * (r0*r0 + r0*r1 + r1*r1);
+}
+
+glm::vec4 coneCenterOfMass(glm::vec3 p0, glm::vec3 p1, float r0, float r1)
+{
+	float l = glm::distance(p0, p1);
+	float height = (1 - (r1 / r0)) * 0.25 + (r1 / r0) * 0.5;
+	height *= l;
+
+	glm::vec3 dir = glm::normalize(p1 - p0);
+
+	glm::vec3 pos = p0 + height * dir;
+
+	return glm::vec4(pos.x, pos.y, pos.z, coneMass(500, r0, r1, l));
+}
+
 // TODO: the last node may not be added, so the last tree/module may not be added. 
 bool Terrain::loadScene(std::string filename)
 {
 	std::ifstream scene;
 	scene.open(filename);
+
+	std::cout << "Loading Scene" << std::endl;
 
 	std::string line;
 
@@ -73,14 +96,16 @@ bool Terrain::loadScene(std::string filename)
 				break;
 			case 6:
 				temperature = stof(trim(header.at(1)));
+				break;
 			case 7:
 				ecosystemSize = stof(trim(header.at(1)));
+				break;
 			}
 		}
 		header.clear();
 	}
 		
-		
+	
 	
 	std::vector<std::string> tokens;
 	int lastSeenTree = 0;
@@ -261,6 +286,89 @@ bool Terrain::loadScene(std::string filename)
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
 	std::cout << "Loading this scene took " << FIXED_FLOAT(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.f)<< " seconds." << std::endl;
+	
+	std::cout << "Scanning through forest to update some terrain parameters..." << std::endl;
+	begin = std::chrono::steady_clock::now();
+
+	// updating the bounding boxes of the modules
+	for (int index = 0; index < modules.size(); index++)
+	{
+		Module& module = modules[index];
+		glm::vec3 minPos{FLT_MAX}, maxPos{FLT_MIN};
+		for (int i = module.startNode; i <= module.lastNode; i++)
+		{
+			// for every node in the module
+			Node& node = nodes[i];
+			glm::vec3 pos = node.position;
+			for (int j = 0; j < 3; j++)
+			{
+				if (pos[j] < minPos[j])
+					minPos[j] = pos[j];
+				if (pos[j] > maxPos[j])
+					maxPos[j] = pos[j];
+			}
+		}
+		module.boundingMin = minPos;
+		module.boundingMax = maxPos;
+	} 
+
+	// finding the average module side length
+	float sum = 0.f;
+	for (int index = 0; index < modules.size(); index++)
+	{
+		Module& module = modules[index];
+		for (int i = 0; i < 2; i++)
+		{
+			sum += module.boundingMax[i] - module.boundingMin[i];
+		}
+	}
+	gridSideLength = sum / (3 * modules.size());
+
+	glm::vec3 minPos{ FLT_MAX }, maxPos{ FLT_MIN };
+	for (int index = 0; index < nodes.size(); index++)
+	{
+		// for every node in the module
+		Node& node = nodes[index];
+		glm::vec3 pos = node.position;
+		for (int j = 0; j < 3; j++)
+		{
+			if (pos[j] < minPos[j])
+				minPos[j] = pos[j];
+			if (pos[j] > maxPos[j])
+				maxPos[j] = pos[j];
+		}
+	}
+
+	std::cout << "The bounding box (x,y,z) of this scene is: (" << maxPos[0] - minPos[0] << ", "
+		<< maxPos[1] - minPos[1] << ", " << maxPos[2] - minPos[2] << ") meters." << std::endl;
+
+	for (int i = 0; i < modules.size(); i++)
+	{
+		Module& module = modules[i];
+		std::vector<glm::vec4> coms;
+		for (int j = module.startEdge; j <= module.lastEdge; j++)
+		{
+			Edge& edge = edges[j];
+			Node& fromNode = nodes[edge.fromNode];
+			Node& toNode = nodes[edge.toNode];
+
+			coms.push_back(coneCenterOfMass(fromNode.position, toNode.position, fromNode.radius, toNode.radius));
+		}
+		glm::vec3 centerOfMass{0.f};
+		float sumOfWeights = 0.f;
+		for (glm::vec4 com : coms)
+		{
+			centerOfMass += com[3] * glm::vec3(com[0], com[1], com[2]);
+			sumOfWeights += com[3];
+		}
+
+		module.centerOfMass = centerOfMass / sumOfWeights;
+	}
+
+
+	end = std::chrono::steady_clock::now();
+	std::cout << "This process took " << FIXED_FLOAT(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.f)<< " seconds." << std::endl;
+	
 	scene.close();
 	return true;
 }
