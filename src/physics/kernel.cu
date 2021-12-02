@@ -206,15 +206,18 @@ __global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edge
     Node& fromNode = nodes[edge.fromNode];
     Node& toNode = nodes[edge.toNode];
 
-    vbo[8 * index + 0] = fromNode.position.x;
-    vbo[8 * index + 1] = fromNode.position.y;
-    vbo[8 * index + 2] = fromNode.position.z;
-    vbo[8 * index + 3] = fromNode.radius;
+    vbo[10 * index + 0] = fromNode.position.x;
+    vbo[10 * index + 1] = fromNode.position.y;
+    vbo[10 * index + 2] = fromNode.position.z;
+    vbo[10 * index + 3] = fromNode.radius;
 
-    vbo[8 * index + 4] = toNode.position.x;
-    vbo[8 * index + 5] = toNode.position.y;
-    vbo[8 * index + 6] = toNode.position.z;
-    vbo[8 * index + 7] = toNode.radius;
+    vbo[10 * index + 4] = toNode.position.x;
+    vbo[10 * index + 5] = toNode.position.y;
+    vbo[10 * index + 6] = toNode.position.z;
+    vbo[10 * index + 7] = toNode.radius;
+
+    vbo[10 * index + 8] = (fromNode.leaf ? 1.0f : -1.f);
+    vbo[10 * index + 9] = (toNode.leaf ? 1.0f : -1.f);
 }
 
 void Simulation::copyBranchesToVBO(float* vbodptr_branches)

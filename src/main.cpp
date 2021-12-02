@@ -33,12 +33,12 @@ Camera camera = Camera(width / (height * 1.f));
 Terrain terrain;
 
 GLuint program[2];
-const char* attributeLocations_terrain[] = { "Position" };
+const char* attributeLocations_terrain[] = { "pos" };
 GLuint VAO_terrain;
 GLuint IBO_terrain;
 GLuint VBO_terrain;
 
-const char* attributeLocations_branches[] = { "Branch" };
+const char* attributeLocations_branches[] = { "v0", "v1", "attrib"};
 GLuint VAO_branches;
 GLuint VBO_branches;
 
@@ -249,7 +249,7 @@ void initShaders(GLuint* program) {
     program[PROG_branches] = glslUtility::createProgram(
         "shaders/branches.vert.glsl",
         "shaders/branches.geom.glsl",
-        "shaders/branches.frag.glsl", attributeLocations_branches, 1);
+        "shaders/branches.frag.glsl", attributeLocations_branches, 3);
 
     glUseProgram(program[PROG_terrain]);
 
@@ -308,18 +308,20 @@ void initVAO(int NUM_OF_BRANCHES) {
     glEnableVertexAttribArray(0);
 
     /** Branches */
-    std::unique_ptr<GLfloat[]> branches{ new GLfloat[8 * NUM_OF_BRANCHES] };
+    std::unique_ptr<GLfloat[]> branches{ new GLfloat[10 * NUM_OF_BRANCHES] };
 
     for (int i = 0; i < NUM_OF_BRANCHES; i++)
     {
-        branches[8 * i + 0] = 0.0f;
-        branches[8 * i + 1] = 0.0f;
-        branches[8 * i + 2] = 0.0f;
-        branches[8 * i + 3] = 0.0f;
-        branches[8 * i + 4] = 0.0f;
-        branches[8 * i + 5] = 0.0f;
-        branches[8 * i + 6] = 0.0f;
-        branches[8 * i + 7] = 0.0f;
+        branches[10 * i + 0] = 0.0f;
+        branches[10 * i + 1] = 0.0f;
+        branches[10 * i + 2] = 0.0f;
+        branches[10 * i + 3] = 0.0f;
+        branches[10 * i + 4] = 0.0f;
+        branches[10 * i + 5] = 0.0f;
+        branches[10 * i + 6] = 0.0f;
+        branches[10 * i + 7] = 0.0f;
+        branches[10 * i + 8] = 0.0f;
+        branches[10 * i + 9] = 0.0f;
     }
 
 
@@ -329,13 +331,16 @@ void initVAO(int NUM_OF_BRANCHES) {
 
     glBindVertexArray(VAO_branches);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_branches);
-    glBufferData(GL_ARRAY_BUFFER,  NUM_OF_BRANCHES * (8 * sizeof(GLfloat)), branches.get(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,  NUM_OF_BRANCHES * (10 * sizeof(GLfloat)), branches.get(), GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)0);
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(4 * sizeof(GLfloat)));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)(4 * sizeof(GLfloat)));
+
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)(8 * sizeof(GLfloat)));
 
     glBindVertexArray(0);
 }

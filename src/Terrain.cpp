@@ -134,6 +134,7 @@ bool Terrain::loadScene(std::string filename)
 		float posy = 0.f;
 		float posz = 0.f;
 		float radius = 0.f;
+		bool leaf = false;
 
 		if (!stop)
 		{
@@ -144,6 +145,7 @@ bool Terrain::loadScene(std::string filename)
 			posy = stof(tokens.at(6));
 			posz = stof(tokens.at(7));
 			radius = stof(tokens.at(8));
+			leaf = (stoi(tokens.at(9)) == 1) ? true : false;
 		}
 		
 		tokens.clear();
@@ -265,6 +267,7 @@ bool Terrain::loadScene(std::string filename)
 		node.firstEdge = -1;
 		node.lastEdge = -1;
 		node.previousEdge = -1;
+		node.leaf = leaf;
 
 		nodes.push_back(node);
 

@@ -17,6 +17,7 @@ struct Node
     int previousEdge;
     int firstEdge; 
     int lastEdge;
+    bool leaf;
 };
 
 struct Edge
@@ -50,7 +51,6 @@ struct Module
     float startArea; // lateral surface area before combustion
     float moduleConstant;
     float waterContent;
-
 };
 
 struct ModuleEdge
