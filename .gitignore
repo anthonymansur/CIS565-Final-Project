@@ -352,4 +352,4 @@ MigrationBackup/
 build/
 .vscode/
 
-.scene/
+scenes/
