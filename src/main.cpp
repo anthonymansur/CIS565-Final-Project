@@ -148,7 +148,7 @@ bool init(int argc, char** argv)
     cudaGLRegisterBufferObject(VBO_branches);
 
     // camera setup
-    camera.updateCamera(program, 2);
+    //camera.updateCamera(program, 2);
 
     initShaders(program);
 
@@ -202,6 +202,7 @@ void mainLoop(int NUM_OF_BRANCHES)
         glUseProgram(program[PROG_branches]);
         glBindVertexArray(VAO_branches);
         glDrawArrays(GL_POINTS, 0, NUM_OF_BRANCHES);
+        glPointSize(1.f);
 
         glfwSwapBuffers(window);
     }
