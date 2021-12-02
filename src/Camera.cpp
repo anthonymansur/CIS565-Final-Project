@@ -18,7 +18,7 @@ void Camera::updateCamera(GLuint* program, int size) {
 	for (int i = 0; i < size; i++)
 	{
 		glUseProgram(program[i]);
-		if ((location = glGetUniformLocation(*program, "u_projMatrix")) != -1) {
+		if ((location = glGetUniformLocation(program[i], "u_projMatrix")) != -1) {
 			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProj[0][0]);
 		}
 	}
