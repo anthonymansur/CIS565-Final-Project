@@ -149,9 +149,6 @@ bool init(int argc, char** argv)
     // TODO: impelment
     cudaGLRegisterBufferObject(VBO_branches);
 
-    // camera setup
-    //camera.updateCamera(program, 2);
-
     initShaders(program);
 
     // GL enables go here 
