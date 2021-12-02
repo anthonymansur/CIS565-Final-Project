@@ -12,6 +12,7 @@ public:
     ~Terrain();
 
     bool loadScene(std::string filename);
+    bool loadTestScene();
 
     float precipitation;
     float temperature;

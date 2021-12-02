@@ -30,7 +30,8 @@ int width = 1280;
 int height = 720;
 
 Camera camera = Camera(width / (height * 1.f));
-Terrain terrain = Terrain();
+Terrain terrain;
+
 GLuint program[2];
 const char* attributeLocations_terrain[] = { "Position" };
 GLuint VAO_terrain;
@@ -60,10 +61,10 @@ int main(int argc, char* argv[])
 {
     projectName = "CIS-565 Final Project: Wildfire Simulation";
 
+    terrain.loadScene("../scenes/scene1.ply");
+
     if (init(argc, argv))
-    {
-        Terrain terrain;
-        terrain.loadScene("../scenes/scene1.ply");
+    {        
         camera.UpdateOrbit(0, -25, -15);
         camera.updateCamera(program, 2);
         Simulation::initSimulation(&terrain);
@@ -225,7 +226,7 @@ void runCUDA()
     // cudaEventRecord(start);
 
     // // What you want to time goes here
-    Simulation::stepSimulation(DT);
+    //Simulation::stepSimulation(DT);
 
     // cudaEventRecord(stop);
 
@@ -239,6 +240,7 @@ void runCUDA()
 
     /** Unmap buffer objects */
     cudaGLUnmapBufferObject(VBO_branches);
+    cudaDeviceSynchronize();
 }
 
 void initShaders(GLuint* program) {
@@ -279,12 +281,13 @@ void initShaders(GLuint* program) {
 void initVAO(int NUM_OF_BRANCHES) {
     
     /** Terrain */
+    float terrainSize = 25.f;
     GLfloat vertices[] =
     {
-        -10.0f, 0.0f, -10.0f, // bottom left
-        -10.0f, 0.0f, 10.0f, // top left
-        10.0f, 0.f, 10.0f, // top right
-        10.0f, 0.f, -10.0f // bottom right
+        -terrainSize, 0.0f, -terrainSize, // bottom left
+        -terrainSize, 0.0f, terrainSize, // top left
+        terrainSize, 0.f, terrainSize, // top right
+        terrainSize, 0.f, -terrainSize // bottom right
     };
 
     GLushort indices[] =

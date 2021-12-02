@@ -69,6 +69,7 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyHostToDevice));
 
     // Allocate grid buffers
+    /*
     HANDLE_ERROR(cudaMalloc((void**)&dev_temp, numOfGrids * sizeof(float)));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_oldtemp, numOfGrids * sizeof(float)));
@@ -93,7 +94,7 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float)));
 
     initGridBuffers(gridCount, dev_temp, dev_oldtemp, dev_vel, dev_oldvel, dev_smokedensity, dev_oldsmokedensity, dev_pressure, M_in);
-
+    */
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
 
     cudaDeviceSynchronize();
@@ -221,4 +222,5 @@ void Simulation::copyBranchesToVBO(float* vbodptr_branches)
     // TODO: implement
     dim3 fullBlocksPerGrid((numOfEdges + blockSize - 1) / blockSize);
     kernUpdateVBOBranches << <fullBlocksPerGrid, blockSize >>> (numOfEdges, vbodptr_branches, dev_nodes, dev_edges);
+    cudaDeviceSynchronize();
 }

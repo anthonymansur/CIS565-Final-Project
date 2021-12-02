@@ -15,13 +15,17 @@
 
 
 Terrain::Terrain()
-{
-	/*Tree tree;
-	tree.AddTree1(this, glm::vec3(0.f), .5f);*/
-};
+{};
 
 Terrain::~Terrain()
 {};
+
+bool Terrain::loadTestScene()
+{
+	Tree tree;
+	tree.AddTree1(this, glm::vec3(0.f), .5f);
+	return true;
+}
 
 // taken from https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
 std::string trim(const std::string& s)
