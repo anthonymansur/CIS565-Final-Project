@@ -224,7 +224,7 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
 __device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
-    float alpha = A_M * /*0.001*/; // TODO: tuning
+    float alpha = A_M /* * 0.001*/; // TODO: tuning
     float diffusion = alpha * (T_adj - T); // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy

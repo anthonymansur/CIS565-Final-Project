@@ -24,9 +24,10 @@ Module* dev_modules;
 ModuleEdge* dev_moduleEdges;
 
 // Grid Dimensions
-int3 gridCount = { 20, 20, 20 };        
-float3 gridSize = { 20.f, 20.f, 20.f };
-float sideLength = 1.f; // "blockSize"
+// TODO: make these dynamic to the scene being loaded
+int3 gridCount = { 24, 8, 24 };        
+float3 gridSize = { 60.f, 20.f, 60.f };
+float sideLength = 2.5f; // "blockSize"
 
 // Grid Kernel Launch params
 const dim3 M_in(M_IX, M_IY, M_IZ);
@@ -186,7 +187,7 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyHostToDevice));
 
     // Allocate grid buffers
-    /*
+    
     HANDLE_ERROR(cudaMalloc((void**)&dev_temp, numOfGrids * sizeof(float)));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_oldtemp, numOfGrids * sizeof(float)));
@@ -211,7 +212,7 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float)));
 
     initGridBuffers(gridCount, dev_temp, dev_oldtemp, dev_vel, dev_oldvel, dev_smokedensity, dev_oldsmokedensity, dev_pressure, M_in);
-    */
+    
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
 
     glGenBuffers(1, &smokeColorBufferObj);
