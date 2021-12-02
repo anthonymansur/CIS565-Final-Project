@@ -171,15 +171,6 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float 
  */
 __device__ float rateOfWaterChange(float changeInMass);
 
-/**
- * @brief Get the center of mass of a module
- * 
- * @param module the module
- *
- * @return the center of mass
- */
-__device__ glm::vec3 centerOfMass(Module& module);
-
 // TODO: transfer these function calls to the fluid solver
 /**
  * @brief Get the change in mass of a module at a given point in space, assuming this point 
@@ -215,9 +206,6 @@ __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx);
  */
 __device__ float checkModuleIntersection(Module& module, glm::vec3 pos);
 
-/** TODO: write description */
-__device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max);
-
 /**
  * @brief Initializes the state of the modules before running the simulation
  * 
@@ -242,3 +230,6 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
 
 /** TODO: add description */
 __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass);
+
+/** TODO: add description */
+__device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize);

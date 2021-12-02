@@ -224,7 +224,7 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
 __device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
-    float alpha = A_M * 0.001; // TODO: tuning
+    float alpha = A_M * /*0.001*/; // TODO: tuning
     float diffusion = alpha * (T_adj - T); // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy
@@ -238,26 +238,15 @@ __device__ float rateOfWaterChange(float changeInMass)
     return c_WM * changeInMass;
 }
 
-// NOTE: this is a very basic implementation. May need to be updated.
-__device__ glm::vec3 centerOfMass(Module& module)
-{
-    glm::vec3 center;
-    for (int i = 0; i < 3; i++)
-        center[i] = (module.boundingMax[i] + module.boundingMin[i]) * 0.5f;
-    return center;
-}
-
 // TODO: transfer these function calls to the fluid solver
 __device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.deltaM;
+    return (1 - glm::distance(x, module.centerOfMass) / dx) * module.deltaM;
 }
 
 __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.waterContent;
+    return (1 - glm::distance(x, module.centerOfMass) / dx) * module.waterContent;
 }
 
 __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
@@ -275,16 +264,17 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
 }
 
 // TODO: add prototype to header file
-__device__ float getAdjacentModuleTemperatures(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
+__device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
 {
     Module& module = modules[moduleInx];
-    float temp = 0.f;
+    float lap = 0.f;
     for (int i = module.startModule; i <= module.endModule; i++)
     {
         Module& adj = modules[moduleEdges[i].moduleInx];
-        temp += adj.temperature;
+        float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
+        lap += (adj.temperature - module.temperature) / (dist * dist);
     }
-    return temp / (module.endModule - module.startModule + 1);
+    return lap;
 }
 
 /**********
@@ -397,8 +387,8 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
     // TODO: sync threads here?
 
     /** 3. Update temperature */
-    float T = getAverageValue(gridTemp, gridCount, blockSize, module.boundingMin, module.boundingMax);
-    float T_adj = getAdjacentModuleTemperatures(modules, moduleEdges, index);
+    float T = getEnvironmentTempAtModule(module, gridTemp, gridCount, blockSize);
+    float T_adj = getModuleTemperatureLaplacian(modules, moduleEdges, index);
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
     float A_M = area; 
@@ -443,7 +433,24 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     gridOfMass[k] = deltaM;
 }
 
+__device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize)
+{
+    // Convert center of mass to grid-space coordinates // e.g. (-10,10) to (0, 20)
+    glm::vec3 com = module.centerOfMass;
+    com.x += floor(gridCount.x * blockSize / 2);
+    com.y += floor(gridCount.y * blockSize / 2);
+    com.z += floor(gridCount.z * blockSize / 2);
+
+    // get the grid at this location
+    for (int i = 0; i < 2; i++)
+        com[i] = blockSize * round(com[i] / blockSize);
+    int inx = m_flatten(com.x, com.y, com.z, gridCount.x, gridCount.y, gridCount.z);
+
+    return temp[inx];
+}
+
 // TODO: may need to change implementation
+// deprecated
 __device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max)
 {
     // convert terrain-space to grid-space coordinates // e.g. (-10,10) to (0, 20)
