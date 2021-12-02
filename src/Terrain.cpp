@@ -109,8 +109,6 @@ bool Terrain::loadScene(std::string filename)
 		header.clear();
 	}
 		
-	
-	
 	std::vector<std::string> tokens;
 	int lastSeenTree = 0;
 	int lastSeenModule = 0;

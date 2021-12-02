@@ -233,3 +233,6 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
 
 /** TODO: add description */
 __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize);
+
+/** TODO: add description */
+__global__ void kernCullModules(int numOfModules, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges);

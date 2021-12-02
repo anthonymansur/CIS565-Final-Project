@@ -332,6 +332,7 @@ __global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edge
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
+
     Edge& edge = edges[index];
     Node& fromNode = nodes[edge.fromNode];
     Node& toNode = nodes[edge.toNode];

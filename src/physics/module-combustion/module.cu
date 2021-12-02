@@ -11,7 +11,7 @@
  */
 __device__ const float T0 = 150, T1 = 450;
 
-__device__ const float T_amb = 15; // TODO: move elsewhere?
+__device__ const float T_amb = 20.f; // TODO: move elsewhere?
 
 /**
  * @brief the saturation temperature of water
@@ -333,12 +333,17 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
 
 __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
 {
+    const float MASS_EPSILON = 0.001;
+
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
     /** for each module in the forest */
     Module& module = modules[index];
     Node& rootNode = nodes[modules->startNode];
+
+    // Module needs to be culled
+    if (module.mass < MASS_EPSILON) return;
 
     /** 1. update the mass */
     // calculate the current state of the module
@@ -449,42 +454,25 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
     return temp[inx];
 }
 
-// TODO: may need to change implementation
-// deprecated
-__device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max)
+__global__ void kernCullModules(int& N, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
 {
-    // convert terrain-space to grid-space coordinates // e.g. (-10,10) to (0, 20)
-    min.x += floor(gridCount.x * blockSize / 2);
-    min.y += floor(gridCount.y * blockSize / 2);
-    min.z += floor(gridCount.z * blockSize / 2);
-    max.x += floor(gridCount.x * blockSize / 2);
-    max.y += floor(gridCount.y * blockSize / 2);
-    max.z += floor(gridCount.z * blockSize / 2);
+    const float MASS_EPSILON = 0.001; // TODO: find the proper value for this
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
 
-    glm::vec3 minPoint, maxPoint;
-    for (int i = 0; i < 2; i++)
+    Module& module = modules[index];
+    int numOfModules = N;
+    for (int i = 0; i < numOfModules; i++)
     {
-        // get the min and max coord
-        minPoint[i] = blockSize * round(min[i] / blockSize); // TODO: is there a better way to do this?
-        maxPoint[i] = blockSize * round(max[i] / blockSize);
-    }
-
-    // iterate over all the grid cells
-    float sum = 0.f;
-    int num = 0;
-    for (float i = minPoint.x; i <= maxPoint.x; i += blockSize)
-    {
-        for (float j = minPoint.y; j <= maxPoint.y; j += blockSize)
+        if (module.mass < MASS_EPSILON)
         {
-            for (float k = minPoint.z; k <= maxPoint.z; k += blockSize)
-            {
-                if ((i >= gridCount.x) || (j >= gridCount.y) || (k >= gridCount.z)) continue;
-                int inx = m_flatten(i, j, k, gridCount.x, gridCount.y, gridCount.z);
-                sum += buffer[inx];
-                num++;
-            }
+            /** cull module */
+            // 1. Remove all the edges
+            // 2. Remove all the nodes
+            // 3. Remove the module from modules
+            // 4. Remap the module edges by iterating through and updating the 
+
+            N--;
         }
     }
-
-    return num > 0 ? (sum / num) : 0;
 }
