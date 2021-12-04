@@ -336,13 +336,13 @@ void initVAO(int NUM_OF_BRANCHES) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int texWidth, texHeight, texChannels;
-    unsigned char* pixels = stbi_load("shaders/grass.jpg", &texWidth, &texHeight, &texChannels, 0/*STBI_rgb_alpha*/);
+    unsigned char* pixels = stbi_load("shaders/forestGround.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
         //throw std::runtime_error("Failed to load texture image");
         std::cout << "Texture Failure" << std::endl;
     }
     else {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
     stbi_image_free(pixels);

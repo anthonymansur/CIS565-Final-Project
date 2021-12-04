@@ -29,10 +29,14 @@ vec3 createPerpendicular(vec3 p1, vec3 p2) {
 
 void main() 
 {    
-    float r1 = geo_v0[0].w * 1.2;
-    float r2 = geo_v1[0].w * 1.2;
-    vec3 axis = geo_v1[0].xyz - geo_v0[0].xyz;
-    vec3 perpX = createPerpendicular(geo_v1[0].xyz, geo_v0[0].xyz);
+    float r1 = geo_v0[0].w * 2.0;
+    float r2 = geo_v1[0].w * 2.0;
+    vec4 g0 = vec4(geo_v0[0].x, geo_v0[0].y * 1.35, geo_v0[0].z, geo_v0[0].w);
+    vec4 g1 = vec4(geo_v1[0].x, geo_v1[0].y * 1.35, geo_v1[0].z, geo_v1[0].w);
+    //geo_v1[0].y *= 2.0;
+    //geo_v0[0].y *= 2.0;
+    vec3 axis = g1.xyz - g0.xyz;
+    vec3 perpX = createPerpendicular(g1.xyz, g0.xyz);
     vec3 perpY = cross(normalize(axis), perpX);
 
     for (int i = 0; i < 16; i++) {
@@ -46,8 +50,8 @@ void main()
 
         aNormal = normal;
 
-        vec3 p1 = geo_v0[0].xyz + r1 * normal;
-        vec3 p2 = geo_v1[0].xyz + r2 * normal;
+        vec3 p1 = g0.xyz + r1 * normal;
+        vec3 p2 = g1.xyz + r2 * normal;
 
         gl_Position = u_projMatrix * vec4(p1, 1.0);
         EmitVertex();
@@ -58,7 +62,7 @@ void main()
 
    /* if (geo_attrib[0].w > -1.0f) {
         // draw leaf at node 1
-        
+
     }*/
 
     /*if (geo_attrib[1].w > -1.0f) {
