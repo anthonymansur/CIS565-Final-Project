@@ -27,7 +27,7 @@ struct Edge
 
     float length;
     float radiiRatio;
-    glm::vec3 direction;
+    //glm::vec3 direction;
     bool culled = false;
 };
 

@@ -163,6 +163,10 @@ __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, fl
 // TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 {
+    /** Replace code with what's commented for simplier solution */
+    //Node& node = nodes[module.startNode];
+    //return node.radius / sqrt((3 / (M_PI * rho)) * module.mass);
+
     float sum = 0;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
@@ -180,13 +184,14 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
             // the initial edge's fromNode. To do so, we will do the following
             
             // go to the current node's previous edge
-            edge = &edges[nodes[edge->fromNode].previousEdge];
+            int nodeInx = edge->fromNode;
+            edge = &edges[nodes[nodeInx].previousEdge];
 
             // compute the product
             float _lambda = edge->radiiRatio;
-            prod *= (_lambda * _lambda) * (1 + lambda + lambda * lambda);
+            prod *= (_lambda * _lambda);
         }
-        sum += l * prod;
+        sum += l * prod * (1 + lambda + lambda * lambda);
     }
 
     return 1 / sqrt(sum);
@@ -203,7 +208,6 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
     int currNodeInx = nodeInx;
     Edge* edge; // will be updated
     float prod = 1;
-
     do
     {
         // Need to traverse every edge in the path from root node to 
@@ -215,9 +219,9 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
         currNodeInx = edge->fromNode;
 
         // compute the product
-        prod *= edge->radiiRatio * rootRadius;
+        prod *= edge->radiiRatio;
     } while (currNodeInx != module.startNode);
-    return prod;
+    return prod * rootRadius;
 }
 
 // TODO: diffusion of adjacent modules not yet correctlyimplemented
