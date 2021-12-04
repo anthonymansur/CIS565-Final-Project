@@ -157,10 +157,11 @@ __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, fl
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
     float k = computeReactionRate(temp, windSpeed);
+
+    // TODO: verify this is correct, as it's throwing nan
     return -1 * k * c * frontArea;
 }
 
-// TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 {
     /** Replace code with what's commented for simplier solution */
@@ -393,14 +394,14 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float windSpeed = 0; // TODO: implement
     float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
     
+    deltaM = 0.f; // TODO: remove!
+
+
     module.mass += deltaM;
     module.deltaM = deltaM;
 
     /** Perform radii update */
     // update the root's radius
-
-    // TODO: this step is incorrect (culls many branches)
-
     float rootRadius = radiiUpdateRootNode(nodes, edges, module, deltaM);
     rootNode.radius = rootRadius;
 
@@ -477,6 +478,7 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
     return temp[inx];
 }
 
+// TODO: cull children of modules
 __global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge* edges)
 {
     const float MASS_EPSILON = 0.001; // TODO: find the proper value for this

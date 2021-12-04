@@ -334,7 +334,7 @@ void Simulation::stepSimulation(float dt)
 
     // For each module in the forest
     // cull modules (and their children) that have zero mass
-
+    
     kernCullModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_moduleIndices, dev_modules, dev_edges);
 
     // stream compaction
@@ -353,7 +353,7 @@ void Simulation::stepSimulation(float dt)
 
     // ping pong buffers
     std::swap(dev_moduleIndices, dev_temp_moduleIndices);
-
+    
     cudaDeviceSynchronize();
 }
 
