@@ -156,7 +156,8 @@ bool init(int argc, char** argv)
     initShaders(program);
 
     // GL enables go here 
-    //glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
 
     return true;
 }
@@ -193,7 +194,7 @@ void mainLoop(int NUM_OF_BRANCHES)
 
         // GL commands go here for visualization
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
-        glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
         glBindTexture(GL_TEXTURE_2D, texture);
 

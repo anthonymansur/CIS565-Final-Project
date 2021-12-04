@@ -17,7 +17,7 @@ void main()
     vec3 ambient = vec3(0.4f) * color.rgb; //ambient 
 
     vec3 lightDir = vec3(0.2f, 1.0f, 0.3f); // diffuse
-    float diff = max(dot(aNormal, lightDir), 0.0);
+    float diff = dot(aNormal, lightDir);
     vec3 diffuse = vec3(0.5f) * diff * color.rgb;
 
     outColor = vec4((ambient + diffuse), 1.0f);
