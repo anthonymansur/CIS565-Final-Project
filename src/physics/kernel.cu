@@ -1,4 +1,7 @@
 #include "kernel.h"
+#include <thrust/device_ptr.h>
+#include <thrust/count.h>
+#include <thrust/copy.h>
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -22,6 +25,9 @@ Node* dev_nodes;
 Edge* dev_edges;
 Module* dev_modules;
 ModuleEdge* dev_moduleEdges;
+
+// indices of tree buffers (needed for culling)
+int* dev_moduleIndices;
 
 // Grid Dimensions
 // TODO: make these dynamic to the scene being loaded
@@ -170,21 +176,24 @@ void Simulation::initSimulation(Terrain* terrain)
     m_terrain = terrain;
     numOfModules = terrain->modules.size();
     numOfEdges = terrain->edges.size();
+
+    int numOfNodes = terrain->nodes.size();
     int numOfGrids = gridCount.x * gridCount.y * gridCount.z;
-    dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
     // Allocate buffers for the modules
-    HANDLE_ERROR(cudaMalloc((void**)&dev_nodes, terrain->nodes.size() * sizeof(Node)));
-    HANDLE_ERROR(cudaMemcpy(dev_nodes, terrain->nodes.data(), terrain->nodes.size() * sizeof(Node), cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_nodes, numOfNodes * sizeof(Node)));
+    HANDLE_ERROR(cudaMemcpy(dev_nodes, terrain->nodes.data(), numOfNodes * sizeof(Node), cudaMemcpyHostToDevice));
 
-    HANDLE_ERROR(cudaMalloc((void**)&dev_edges, terrain->edges.size() * sizeof(Edge)));
-    HANDLE_ERROR(cudaMemcpy(dev_edges, terrain->edges.data(), terrain->edges.size() * sizeof(Edge), cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_edges, numOfEdges * sizeof(Edge)));
+    HANDLE_ERROR(cudaMemcpy(dev_edges, terrain->edges.data(), numOfEdges * sizeof(Edge), cudaMemcpyHostToDevice));
 
-    HANDLE_ERROR(cudaMalloc((void**)&dev_modules, terrain->modules.size() * sizeof(Module)));
-    HANDLE_ERROR(cudaMemcpy(dev_modules, terrain->modules.data(), terrain->modules.size() * sizeof(Module), cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_modules, numOfModules * sizeof(Module)));
+    HANDLE_ERROR(cudaMemcpy(dev_modules, terrain->modules.data(), numOfModules * sizeof(Module), cudaMemcpyHostToDevice));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_moduleEdges, terrain->moduleEdges.size() * sizeof(ModuleEdge)));
     HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyHostToDevice));
+
+    HANDLE_ERROR(cudaMalloc((void**)&dev_moduleIndices, numOfModules * sizeof(Module)));
 
     // Allocate grid buffers
     
@@ -212,8 +221,14 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float)));
 
     initGridBuffers(gridCount, dev_temp, dev_oldtemp, dev_vel, dev_oldvel, dev_smokedensity, dev_oldsmokedensity, dev_pressure, M_in);
+
+    dim3 modules_fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
+    dim3 nodes_fullBlocksPerGrid((numOfNodes + blockSize - 1) / blockSize);
+    dim3 edges_fullBlocksPerGrid((numOfEdges + blockSize - 1) / blockSize);
     
-    kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
+    kernInitModules << <modules_fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
+
+    kernInitIndices << <modules_fullBlocksPerGrid, blockSize >> > (numOfModules, dev_moduleIndices);
 
     glGenBuffers(1, &smokeColorBufferObj);
     glBindBuffer(GL_ARRAY_BUFFER, smokeColorBufferObj);
@@ -229,6 +244,24 @@ void Simulation::initSimulation(Terrain* terrain)
 * stepSimulation *
 ******************/
 
+struct is_negative
+{
+    __host__ __device__
+        bool operator()(int& x)
+    {
+        return x < 0;
+    }
+};
+
+struct is_nonnegative
+{
+    __host__ __device__
+        bool operator()(int& x)
+    {
+        return x >= 0;
+    }
+};
+
 void Simulation::stepSimulation(float dt)
 {
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
@@ -238,7 +271,7 @@ void Simulation::stepSimulation(float dt)
     // - Perform radii update
     // - Update temperature
     // - Update released water content
-    kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, gridCount, sideLength, dev_nodes, dev_edges, dev_modules, dev_moduleEdges, dev_oldtemp);
+    kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, dev_moduleIndices, gridCount, sideLength, dev_nodes, dev_edges, dev_modules, dev_moduleEdges, dev_oldtemp);
 
     // For each grid point x in grid space
     // - update mass and water content
@@ -302,6 +335,18 @@ void Simulation::stepSimulation(float dt)
     // For each module in the forest
     // cull modules (and their children) that have zero mass
     // TODO: implement
+    thrust::device_ptr<int> thrust_indices = 
+        thrust::device_ptr<int>(dev_moduleIndices);
+
+    int numCulled = thrust::count_if(thrust::device, thrust_indices, thrust_indices + numOfModules * sizeof(int), is_negative());
+    numOfModules -= numCulled;
+
+    // help
+    //thrust::copy_if(thrust::device, thrust_indices, thrust_indices + numOfModules * sizeof(int), thrust_indices_pingpong, is_nonnegative());
+
+    kernCullModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_moduleIndices, dev_modules, dev_edges);
+
+    // update dev_numOfModules and stream compact dev_moduleIndices
 
     cudaDeviceSynchronize();
 }
@@ -327,28 +372,40 @@ void Simulation::endSimulation()
 /********************
 * copyBranchesToVBO *
 *********************/
+
+// TODO: need to cull edges
 __global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edges)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
-
     Edge& edge = edges[index];
-    Node& fromNode = nodes[edge.fromNode];
-    Node& toNode = nodes[edge.toNode];
 
-    vbo[10 * index + 0] = fromNode.position.x;
-    vbo[10 * index + 1] = fromNode.position.y;
-    vbo[10 * index + 2] = fromNode.position.z;
-    vbo[10 * index + 3] = fromNode.radius;
+    if (!edge.culled)
+    {
+        Node& fromNode = nodes[edge.fromNode];
+        Node& toNode = nodes[edge.toNode];
 
-    vbo[10 * index + 4] = toNode.position.x;
-    vbo[10 * index + 5] = toNode.position.y;
-    vbo[10 * index + 6] = toNode.position.z;
-    vbo[10 * index + 7] = toNode.radius;
+        vbo[10 * index + 0] = fromNode.position.x;
+        vbo[10 * index + 1] = fromNode.position.y;
+        vbo[10 * index + 2] = fromNode.position.z;
+        vbo[10 * index + 3] = fromNode.radius;
 
-    vbo[10 * index + 8] = (fromNode.leaf ? 1.0f : -1.f);
-    vbo[10 * index + 9] = (toNode.leaf ? 1.0f : -1.f);
+        vbo[10 * index + 4] = toNode.position.x;
+        vbo[10 * index + 5] = toNode.position.y;
+        vbo[10 * index + 6] = toNode.position.z;
+        vbo[10 * index + 7] = toNode.radius;
+
+        vbo[10 * index + 8] = (fromNode.leaf ? 1.0f : -1.f);
+        vbo[10 * index + 9] = (toNode.leaf ? 1.0f : -1.f);
+    }
+    else
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            vbo[10 * index + i] = 0.f;
+        }
+    }
 }
 
 void Simulation::copyBranchesToVBO(float* vbodptr_branches)

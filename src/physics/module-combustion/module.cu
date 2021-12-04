@@ -331,7 +331,15 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.waterContent = 0;
 }
 
-__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
+__global__ void kernInitIndices(int N, int* indices)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    indices[index] = index;
+}
+
+__global__ void kernModuleCombustion(float DT, int*N, int* moduleIndices, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
 {
     const float MASS_EPSILON = 0.001;
 
@@ -339,7 +347,7 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
     if (index >= N) return;
 
     /** for each module in the forest */
-    Module& module = modules[index];
+    Module& module = modules[moduleIndices[index]];
     Node& rootNode = nodes[modules->startNode];
 
     // Module needs to be culled
@@ -454,25 +462,25 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
     return temp[inx];
 }
 
-__global__ void kernCullModules(int& N, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
+__global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge* edges)
 {
     const float MASS_EPSILON = 0.001; // TODO: find the proper value for this
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
-    Module& module = modules[index];
-    int numOfModules = N;
-    for (int i = 0; i < numOfModules; i++)
-    {
-        if (module.mass < MASS_EPSILON)
-        {
-            /** cull module */
-            // 1. Remove all the edges
-            // 2. Remove all the nodes
-            // 3. Remove the module from modules
-            // 4. Remap the module edges by iterating through and updating the 
+    Module& module = modules[moduleIndices[index]];
 
-            N--;
+    // check if module needs to be culled
+    if (module.mass < MASS_EPSILON)
+    {
+        moduleIndices[index] = -1; // cull the module
+
+        // for every edge in the module, cull it so it isn't rendered
+        for (int i = module.startEdge; i <= module.lastEdge; i++)
+        {
+
+            Edge& edge = edges[i];
+            edge.culled = true;
         }
     }
 }

@@ -28,6 +28,7 @@ struct Edge
     float length;
     float radiiRatio;
     glm::vec3 direction;
+    bool culled;
 };
 
 struct Module
@@ -38,8 +39,8 @@ struct Module
     int lastNode; // the last node in the module's graph
     int startEdge; 
     int lastEdge; // may be a connection node
-    int startModule;
-    int endModule;
+    int startModule; // module edge pointer
+    int endModule; // module edge pointer
     // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
 
 
