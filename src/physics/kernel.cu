@@ -278,7 +278,7 @@ void Simulation::stepSimulation(float dt)
     // TODO: implement
     const dim3 gridDim(blocksNeeded(gridCount.x, M_IX), blocksNeeded(gridCount.y, M_IY), blocksNeeded(gridCount.z, M_IZ));
     
-    //kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_moduleIndices, dev_modules, dev_deltaM);
+    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_moduleIndices, dev_modules, dev_deltaM);
 
     // Update air temperature
     // update drag forces (wind)
