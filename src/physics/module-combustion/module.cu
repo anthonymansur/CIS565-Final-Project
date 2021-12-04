@@ -267,7 +267,6 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
 // TODO: this throws an error!!!
 __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
 {
-    return 0.f; // TODO: fix bug
     Module& module = modules[moduleInx];
     float lap = 0.f;
     for (int i = module.startModule; i <= module.endModule; i++)
