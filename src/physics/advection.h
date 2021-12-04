@@ -26,7 +26,6 @@ int blocksNeeded(int N_i, int M_i);
 __device__ int flatten(int3 gridCount, int col, int row, int z);
 __device__ int vflatten(int3 gridCount, int col, int row, int z);
 __device__ int flatten(int col, int row, int z, int width, int height, int depth);
-__device__ unsigned char clip(int n);
 
 __device__ float3 operator+(const float3& a, const float3& b);
 __device__ float3 operator-(const float3& a, const float3& b);

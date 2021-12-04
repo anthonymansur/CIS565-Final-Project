@@ -9,6 +9,7 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <glm/gtx/transform.hpp>
+#include <array>
 
 #include "utilityCore.hpp"
 #include "glslUtility.hpp"
@@ -32,7 +33,7 @@ int height = 720;
 Camera camera = Camera(width / (height * 1.f));
 Terrain terrain;
 
-GLuint program[2];
+GLuint program[3];
 const char* attributeLocations_terrain[] = { "pos" };
 GLuint VAO_terrain;
 GLuint IBO_terrain;
@@ -42,13 +43,25 @@ const char* attributeLocations_branches[] = { "v0", "v1", "attrib"};
 GLuint VAO_branches;
 GLuint VBO_branches;
 
+const char* attributeLocations_fluid[] = { "pos" };
+GLuint VAO_smoke;
+GLuint VBO_smoke;
+GLuint IBO_smoke;
+
 const unsigned int PROG_terrain = 0;
-const unsigned int PROG_branches = 1;
+const unsigned int PROG_branches = 2;
+const unsigned int PROG_fluid = 1;
+
+// Grid Dimensions
+int3 gridCount = { 24, 8, 24 };
+float3 gridSize = { 60.f, 20.f, 60.f };
+float sideLength = 2.5f; // "blockSize"
 
 // functions
 bool init(int argc, char** argv);
 void initShaders(GLuint* program);
 void initVAO(int NUM_OF_BRANCHES);
+void initSmokeQuads();
 void mainLoop(int NUM_OF_BRANCHES);
 void runCUDA();
 
@@ -66,8 +79,8 @@ int main(int argc, char* argv[])
     if (init(argc, argv))
     {        
         camera.UpdateOrbit(0, -25, -15);
-        camera.updateCamera(program, 2);
-        Simulation::initSimulation(&terrain);
+        camera.updateCamera(program, 3);
+        Simulation::initSimulation(&terrain, gridCount);
         // TODO: generate terrain
         mainLoop(terrain.edges.size());
         return 0;
@@ -138,6 +151,7 @@ bool init(int argc, char** argv)
 
     // Initialize drawing state
     initVAO(terrain.edges.size());
+    initSmokeQuads();
 
     // **CUDA OpenGL Interoperability**
 
@@ -203,6 +217,12 @@ void mainLoop(int NUM_OF_BRANCHES)
         glDrawArrays(GL_POINTS, 0, NUM_OF_BRANCHES);
         glPointSize(1.f);
 
+        /** Draw smoke */
+        glUseProgram(program[PROG_fluid]);
+        glBindVertexArray(VAO_smoke);
+        glDrawElements(GL_TRIANGLES, 6 * gridCount.x * gridCount.y * gridCount.z, GL_UNSIGNED_INT, 0);
+
+
         glfwSwapBuffers(window);
     }
     glfwDestroyWindow(window);
@@ -250,6 +270,9 @@ void initShaders(GLuint* program) {
         "shaders/branches.vert.glsl",
         "shaders/branches.geom.glsl",
         "shaders/branches.frag.glsl", attributeLocations_branches, 3);
+    program[PROG_fluid] = glslUtility::createProgram(
+        "shaders/fluid.vert",
+        "shaders/fluid.frag", attributeLocations_fluid, 1); // len of the attributeLocations_fluid
 
     glUseProgram(program[PROG_terrain]);
 
@@ -273,6 +296,116 @@ void initShaders(GLuint* program) {
     if ((location = glGetUniformLocation(program[PROG_branches], "u_projMatrix")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
     }
+
+    glUseProgram(program[PROG_fluid]);
+
+    if ((location = glGetUniformLocation(program[PROG_fluid], "u_projMatrix")) != -1) {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
+    }
+    if ((location = glGetUniformLocation(program[PROG_fluid], "u_cameraPos")) != -1) {
+        glUniform3fv(location, 1, &camera.position[0]);
+    }
+
+    //glm::mat4 model = glm::rotate(90.f, glm::vec3(1.f, 0.f, 0.f));
+    if ((location = glGetUniformLocation(program[PROG_fluid], "u_model")) != -1) {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &model[0][0]);
+    }
+}
+
+int flatten(const int i_x, const int i_y, const int i_z) {
+    return i_x + i_y * gridCount.x + i_z * gridCount.y * gridCount.z;
+}
+
+void initSmokeQuads() {
+    float terrainSize = 25.f;
+
+    GLfloat vertices[] =
+    {
+        -terrainSize, 5.0f, -terrainSize, // bottom left
+        -terrainSize, 5.0f, terrainSize, // top left
+        terrainSize, 5.f, terrainSize, // top right
+        terrainSize, 5.f, -terrainSize // bottom right
+    };
+
+    GLushort indices[] =
+    {
+        0, 1, 2, 0, 2, 3
+    };
+
+    // MIGHT NEED DYNAMIC_DRAW FOR COLOR UPDATE SINCE IT CHANGES
+
+    GLuint nflat = gridCount.x * gridCount.y * gridCount.z;
+    GLfloat* smokeQuadsPositions = new GLfloat[3 * 4 * 3 * nflat];
+    GLuint* smokeIndexes = new GLuint[6 * nflat]; // 2 triangles
+
+    // setting up positions for square faces
+    for (unsigned int x = 0; x < gridCount.x; x++) {
+        for (unsigned int y = 0; y < gridCount.y; y++) {
+            for (unsigned int z = 0; z < gridCount.z; z++) {
+                std::array<float, 12> vertexes = {
+                    x * sideLength, y * sideLength, z * sideLength,
+                    x * sideLength, y * sideLength, (z + 1) * sideLength,
+                    x * sideLength, (y + 1) * sideLength, (z + 1) * sideLength,
+                    x * sideLength, (y + 1) * sideLength, z * sideLength
+                };
+                std::copy(vertexes.begin(), vertexes.end(),
+                    smokeQuadsPositions + 12 * flatten(x, y, z));
+            }
+        }
+    }
+    for (unsigned int x = 0; x < gridCount.x; x++) {
+        for (unsigned int y = 0; y < gridCount.x; y++) {
+            for (unsigned int z = 0; z < gridCount.z; z++) {
+                std::array<float, 12> vertexes = {
+                    x * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, y * sideLength, (z + 1) * sideLength,
+                    x * sideLength, y * sideLength, (z + 1) * sideLength
+                };
+                std::copy(vertexes.begin(), vertexes.end(),
+                    smokeQuadsPositions + 1 * 4 * 3 * nflat + 12 * flatten(x, y, z));
+            }
+        }
+    }
+    for (unsigned int x = 0; x < gridCount.x; x++) {
+        for (unsigned int y = 0; y < gridCount.y; y++) {
+            for (unsigned int z = 0; z < gridCount.z; z++) {
+                std::array<float, 12> vertexes = {
+                    x * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength, (y + 1) * sideLength, z * sideLength,
+                    x * sideLength, (y + 1) * sideLength, z * sideLength
+                };
+                std::copy(vertexes.begin(), vertexes.end(),
+                    smokeQuadsPositions + 2 * 4 * 3 * nflat + 12 * flatten(x, y, z));
+            }
+        }
+    }
+
+    for (GLuint i = 0; i < 6 * nflat; i += 6) {
+        GLuint offset = (i / 6) * 4;
+        smokeIndexes[i] = offset;
+        smokeIndexes[i + 1] = offset + 1;
+        smokeIndexes[i + 2] = offset + 2;
+        smokeIndexes[i + 3] = offset;
+        smokeIndexes[i + 4] = offset + 2;
+        smokeIndexes[i + 5] = offset + 3;
+    }
+
+    glGenVertexArrays(1, &VAO_smoke);
+    glGenBuffers(1, &VBO_smoke);
+    glGenBuffers(1, &IBO_smoke);
+
+    glBindVertexArray(VAO_smoke);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_smoke);
+    glBufferData(GL_ARRAY_BUFFER, 3 * nflat * 4 * 3 * sizeof(GLfloat), smokeQuadsPositions, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO_smoke);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * nflat * sizeof(GLuint), smokeIndexes, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glEnableVertexAttribArray(0);
 }
 
 void initVAO(int NUM_OF_BRANCHES) {

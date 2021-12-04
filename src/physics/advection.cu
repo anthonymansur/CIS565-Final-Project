@@ -9,8 +9,6 @@
 
 int blocksNeeded(int N_i, int M_i) { return (N_i + M_i - 1) / M_i; }
 
-__device__ unsigned char clip(int n) { return n > 255 ? 255 : (n < 0 ? 0 : n); }
-
 __device__ int idxClip(int idx, int idxMax) {
     return idx > (idxMax - 1) ? (idxMax - 1) : (idx < 0 ? 0 : idx);
 }

@@ -21,11 +21,6 @@ Edge* dev_edges;
 Module* dev_modules;
 ModuleEdge* dev_moduleEdges;
 
-// Grid Dimensions
-int3 gridCount = { 20, 20, 20 };        
-float3 gridSize = { 20.f, 20.f, 20.f };
-float sideLength = 1.f; // "blockSize"
-
 // Grid Kernel Launch params
 const dim3 M_in(M_IX, M_IY, M_IZ);
 
@@ -47,7 +42,7 @@ Terrain* m_terrain;
 * initSimulation *
 ******************/
 
-void Simulation::initSimulation(Terrain* terrain)
+void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
 {
     m_terrain = terrain;
     numOfModules = terrain->modules.size();
@@ -104,7 +99,7 @@ void Simulation::initSimulation(Terrain* terrain)
 * stepSimulation *
 ******************/
 
-void Simulation::stepSimulation(float dt)
+void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength)
 {
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 

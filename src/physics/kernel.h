@@ -36,12 +36,15 @@ __device__ float EVAP = 0.5362f;                // module water to mass ratio
 __device__ float SMOKE_MASS = 16.f;             // smoke mass contribution coefficient
 __device__ float SMOKE_WATER = 200.f;           // smoke water contribution coefficient
 __device__ float TAU = 200.f;                   // temperature change per pass of wood combusted
-
+__device__ int SMOKE_RAY_SQRT_COUNT = 60;
+__device__ float SMOKE_EXTINCTION_COEFF = 15e1;
+__device__ float SMOKE_ALBEDO = 0.7f;
+__device__ float SMOKE_LIGHT_RADIANCE = 5e0;
 
 namespace Simulation
 {
-    void initSimulation(Terrain* terrain);
-    void stepSimulation(float dt);
+    void initSimulation(Terrain* terrain, int3 gridCount);
+    void stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength);
     void endSimulation();
     void copyBranchesToVBO(float* vbodptr_branches);
 }

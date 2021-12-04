@@ -69,7 +69,7 @@ void Camera::mousePositionCallback(GLFWwindow* window, double xpos, double ypos,
 
 		previousX = xpos;
 		previousY = ypos;
-		updateCamera(program, 2);
+		updateCamera(program, 3);
 	}
 	else if (rightMousePressed) {
 		double deltaZ = static_cast<float>((previousY - ypos) * 0.05);
@@ -77,6 +77,6 @@ void Camera::mousePositionCallback(GLFWwindow* window, double xpos, double ypos,
 		UpdateOrbit(0.0f, 0.0f, deltaZ);
 
 		previousY = ypos;
-		updateCamera(program, 2);
+		updateCamera(program, 3);
 	}
 }
