@@ -69,6 +69,7 @@ int main(int argc, char* argv[])
         camera.UpdateOrbit(0, -25, -15);
         camera.updateCamera(program, 2);
         Simulation::initSimulation(&terrain);
+        //Simulation::endSimulation();
         // TODO: generate terrain
         mainLoop(terrain.edges.size());
         return 0;

@@ -194,6 +194,8 @@ bool Terrain::loadScene(std::string filename)
 			module.lastEdge = edges.size() - 1;
 			module.culled = false;
 			module.previousNode = -1;
+			module.startModule = -1;
+			module.endModule = -1;
 			// update module's previous node
 			Node& rootNode = nodes[moduleStartNode];
 			// // if not root module of tree

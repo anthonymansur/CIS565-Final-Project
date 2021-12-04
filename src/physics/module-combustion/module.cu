@@ -163,7 +163,6 @@ __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, fl
 // TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 {
-    float moduleConstant = sqrt(3 / M_PI * rho);
     float sum = 0;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
@@ -171,21 +170,22 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 
         Edge* edge = &edges[i]; // will be updated
         float l = edge->length;
+        float lambda = edge->radiiRatio;
         float prod = 1;
-        do
+
+        // check to see if fromNode isn't the root node
+        while (edge->fromNode != module.startNode)
         {
-            // For every edge in the path of the module's root node to the 
-            // edge's from node, traversing first from the edge's from node
-            // to the root node, do the following: 
+            // Need to traverse every edge in the path from root node to 
+            // the initial edge's fromNode. To do so, we will do the following
+            
+            // go to the current node's previous edge
+            edge = &edges[nodes[edge->fromNode].previousEdge];
 
-            float lambda = edge->radiiRatio;
-            prod *= (lambda * lambda) * (1 + lambda + lambda * lambda);
-
-            // get previous edge if not at the first edge
-            if (edge->fromNode != module.startNode)
-                edge = &edges[nodes[edge->fromNode].previousEdge];
-        } while (edge->fromNode != module.startNode);     
-
+            // compute the product
+            float _lambda = edge->radiiRatio;
+            prod *= (_lambda * _lambda) * (1 + lambda + lambda * lambda);
+        }
         sum += l * prod;
     }
 
@@ -203,20 +203,20 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
     int currNodeInx = nodeInx;
     Edge* edge; // will be updated
     float prod = 1;
+
     do
     {
-        // For every edge in the path of the module's root node to the 
-        // edge's from node, traversing first from the edge's from node
-        // to the root node, do the following: 
+        // Need to traverse every edge in the path from root node to 
+        // the node given. To do so, we will do the following
 
-        // TODO: use previous edge instead find the parent 
-        edge = &edges[nodes[currNodeInx].previousEdge]; 
-        prod *= edge->radiiRatio * rootRadius; 
-
-        // update currNode
+        // go to the current node's previous edge
+        Node& node = nodes[currNodeInx];
+        edge = &edges[node.previousEdge];
         currNodeInx = edge->fromNode;
-    } while (edge->fromNode != module.startNode); 
 
+        // compute the product
+        prod *= edge->radiiRatio * rootRadius;
+    } while (currNodeInx != module.startNode);
     return prod;
 }
 
@@ -269,6 +269,10 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
 {
     Module& module = modules[moduleInx];
     float lap = 0.f;
+
+    if (module.startModule < 0 || module.endModule < 0)
+        return 0.f; 
+
     for (int i = module.startModule; i <= module.endModule; i++)
     {
         Module& adj = modules[moduleEdges[i].moduleInx];
