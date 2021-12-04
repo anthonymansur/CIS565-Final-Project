@@ -2,6 +2,7 @@
 
 in float frag_attrib;
 in float v_coord;
+in vec3 aNormal;
 out vec4 outColor;
 
 void main() 

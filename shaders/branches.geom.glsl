@@ -14,6 +14,7 @@ in vec4 geo_v1[];
 in vec2 geo_attrib[];
 
 out float frag_attrib;
+out vec3 aNormal;
 out float v_coord;
 
 vec3 createPerpendicular(vec3 p1, vec3 p2) {
@@ -43,6 +44,8 @@ void main()
                             ca * perpX.y + sa * perpY.y,
                             ca * perpX.z + sa * perpY.z );
 
+        aNormal = normal;
+
         vec3 p1 = geo_v0[0].xyz + r1 * normal;
         vec3 p2 = geo_v1[0].xyz + r2 * normal;
 
@@ -53,12 +56,12 @@ void main()
     }
     EndPrimitive();
 
-    /*if (geo_attrib[0] > -1.0f) {
+   /* if (geo_attrib[0].w > -1.0f) {
         // draw leaf at node 1
         
-    }
+    }*/
 
-    if (geo_attrib[1] > -1.0f) {
+    /*if (geo_attrib[1].w > -1.0f) {
         // draw leaf at node 2
     }*/
 
