@@ -1,3 +1,5 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 // includes
 #include <iostream>
 #include <cstdlib>
@@ -62,6 +64,13 @@ int main(int argc, char* argv[])
     projectName = "CIS-565 Final Project: Wildfire Simulation";
 
     terrain.loadScene("../scenes/scene1.ply");
+
+    int texWidth, texHeight, texChannels;
+    stbi_uc* pixels = stbi_load("images/grass.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    if (!pixels) {
+        //throw std::runtime_error("Failed to load texture image");
+        std::cout << "Texture Failure" << std::endl;
+    }
 
     if (init(argc, argv))
     {        
