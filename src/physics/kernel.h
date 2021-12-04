@@ -8,6 +8,7 @@
 #include "../errors.h"
 #include "advection.h"
 #include "pressure.h"
+#include "smoke_render.h"
 
 // includes go here
 
@@ -44,7 +45,7 @@ __device__ float SMOKE_LIGHT_RADIANCE = 5e0;
 namespace Simulation
 {
     void initSimulation(Terrain* terrain, int3 gridCount);
-    void stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength);
+    void stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength, float* d_out);
     void endSimulation();
     void copyBranchesToVBO(float* vbodptr_branches);
 }

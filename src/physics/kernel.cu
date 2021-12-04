@@ -34,6 +34,7 @@ float3* dev_ccvel;
 float3* dev_vorticity;
 float* dev_smokedensity;
 float* dev_oldsmokedensity;
+float* dev_smokeRadiance;
 float* dev_deltaM;
 
 Terrain* m_terrain;
@@ -64,7 +65,6 @@ void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
     HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyHostToDevice));
 
     // Allocate grid buffers
-    /*
     HANDLE_ERROR(cudaMalloc((void**)&dev_temp, numOfGrids * sizeof(float)));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_oldtemp, numOfGrids * sizeof(float)));
@@ -85,11 +85,13 @@ void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_oldsmokedensity, numOfGrids * sizeof(float)));
 
+    HANDLE_ERROR(cudaMalloc((void**)&dev_smokeRadiance, numOfGrids * sizeof(float)));
+
     HANDLE_ERROR(cudaMalloc((void**)&dev_deltaM, numOfGrids * sizeof(float)));
     HANDLE_ERROR(cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float)));
 
     initGridBuffers(gridCount, dev_temp, dev_oldtemp, dev_vel, dev_oldvel, dev_smokedensity, dev_oldsmokedensity, dev_pressure, M_in);
-    */
+
     kernInitModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
 
     cudaDeviceSynchronize();
@@ -99,7 +101,7 @@ void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
 * stepSimulation *
 ******************/
 
-void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength)
+void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength, float* d_out)
 {
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
@@ -108,14 +110,14 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     // - Perform radii update
     // - Update temperature
     // - Update released water content
-    kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, gridCount, sideLength, dev_nodes, dev_edges, dev_modules, dev_moduleEdges, dev_oldtemp);
+    //kernModuleCombustion << <fullBlocksPerGrid, blockSize >> > (dt, numOfModules, gridCount, sideLength, dev_nodes, dev_edges, dev_modules, dev_moduleEdges, dev_oldtemp);
 
     // For each grid point x in grid space
     // - update mass and water content
     // TODO: implement
     const dim3 gridDim(blocksNeeded(gridCount.x, M_IX), blocksNeeded(gridCount.y, M_IY), blocksNeeded(gridCount.z, M_IZ));
     
-    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_modules, dev_deltaM);
+    //kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_modules, dev_deltaM);
 
     // Update air temperature
     // update drag forces (wind)
@@ -128,16 +130,16 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     HANDLE_ERROR(cudaMalloc(&dev_lap, gridCount.x * gridCount.y * gridCount.z * sizeof(float)));
     HANDLE_ERROR(cudaMalloc(&dev_alpha_m, gridCount.x * gridCount.y * gridCount.z * sizeof(float3)));
 
-    computeVorticity << <gridDim, M_in >> > (gridCount, blockSize, dev_vorticity, dev_oldvel, dev_ccvel);
+    computeVorticity << <gridDim, M_in >> > (gridCount, sideLength, dev_vorticity, dev_oldvel, dev_ccvel);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_oldtemp, dev_vel, dev_oldvel, dev_alpha_m, dev_oldsmokedensity, dev_vorticity, externalForce);
+    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_oldvel, dev_alpha_m, dev_oldsmokedensity, dev_vorticity, externalForce);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     // Pressure Solve
-    forceIncompressibility(gridCount, blockSize, dev_vel, dev_pressure);
+    forceIncompressibility(gridCount, sideLength, dev_vel, dev_pressure);
 
-    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
+    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     //float* h_temp = (float*)malloc(sizeof(float) * 20 * 20 * 20);
@@ -150,8 +152,10 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     //printf("%d\n", num);
     //free(h_temp);
 
-    smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
+    smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
+
+    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());
