@@ -62,6 +62,7 @@ int main(int argc, char* argv[])
     projectName = "CIS-565 Final Project: Wildfire Simulation";
 
     terrain.loadScene("../scenes/scene1.ply");
+    //terrain.loadTestScene();
 
     if (init(argc, argv))
     {        
@@ -223,7 +224,7 @@ void runCUDA()
     // cudaEventRecord(start);
 
     // // What you want to time goes here
-    //Simulation::stepSimulation(DT);
+    Simulation::stepSimulation(DT);
 
     // cudaEventRecord(stop);
 

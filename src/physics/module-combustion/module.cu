@@ -264,13 +264,16 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
 }
 
 // TODO: add prototype to header file
+// TODO: this throws an error!!!
 __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
 {
+    return 0.f; // TODO: fix bug
     Module& module = modules[moduleInx];
     float lap = 0.f;
     for (int i = module.startModule; i <= module.endModule; i++)
     {
         Module& adj = modules[moduleEdges[i].moduleInx];
+        if (adj.culled) continue;
         float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
         lap += (adj.temperature - module.temperature) / (dist * dist);
     }
@@ -324,10 +327,10 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.boundingMax = maxPos;
 
     module.deltaM = 0;
-    if (index == 1)
-        module.temperature = (T0 + T1) / 2; // set module 1 on fire
-    else
-        module.temperature = T_amb;
+    //if (index == 1)
+    //    module.temperature = (T0 + T1) / 2; // set module 1 on fire
+    //else
+    module.temperature = T_amb;
     module.waterContent = 0;
 }
 
@@ -339,16 +342,18 @@ __global__ void kernInitIndices(int N, int* indices)
     indices[index] = index;
 }
 
-__global__ void kernModuleCombustion(float DT, int*N, int* moduleIndices, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
+__global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
 {
     const float MASS_EPSILON = 0.001;
 
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
+    int moduleIndex = moduleIndices[index];
+
     /** for each module in the forest */
-    Module& module = modules[moduleIndices[index]];
-    Node& rootNode = nodes[modules->startNode];
+    Module& module = modules[moduleIndex];
+    Node& rootNode = nodes[module.startNode];
 
     // Module needs to be culled
     if (module.mass < MASS_EPSILON) return;
@@ -386,6 +391,9 @@ __global__ void kernModuleCombustion(float DT, int*N, int* moduleIndices, int3 g
 
     /** Perform radii update */
     // update the root's radius
+
+    // TODO: this step is incorrect (culls many branches)
+
     float rootRadius = radiiUpdateRootNode(nodes, edges, module, deltaM);
     rootNode.radius = rootRadius;
 
@@ -401,7 +409,7 @@ __global__ void kernModuleCombustion(float DT, int*N, int* moduleIndices, int3 g
 
     /** 3. Update temperature */
     float T = getEnvironmentTempAtModule(module, gridTemp, gridCount, blockSize);
-    float T_adj = getModuleTemperatureLaplacian(modules, moduleEdges, index);
+    float T_adj = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
     float A_M = area; 
@@ -422,7 +430,7 @@ __device__ int m_idxClip(int idx, int idxMax) {
 __device__ int m_flatten(int col, int row, int z, int width, int height, int depth) {
     return m_idxClip(col, width) + m_idxClip(row, height) * width + m_idxClip(z, depth) * width * height;
 }
-__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass)
+__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, int* moduleIndices, Module* modules, float* gridOfMass)
 {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -440,7 +448,7 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     float deltaM = 0;
     for (int i = 0; i < numOfModules; i++)
     {
-        if (checkModuleIntersection(modules[i], glmPos))
+        if (checkModuleIntersection(modules[moduleIndices[i]], glmPos))
             deltaM += getDeltaMassOfModuleAtPoint(modules[i], glmPos, blockSize);
     }
     gridOfMass[k] = deltaM;

@@ -28,6 +28,7 @@ ModuleEdge* dev_moduleEdges;
 
 // indices of tree buffers (needed for culling)
 int* dev_moduleIndices;
+int* dev_temp_moduleIndices;
 
 // Grid Dimensions
 // TODO: make these dynamic to the scene being loaded
@@ -194,6 +195,7 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMemcpy(dev_moduleEdges, terrain->moduleEdges.data(), terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyHostToDevice));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_moduleIndices, numOfModules * sizeof(Module)));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_temp_moduleIndices, numOfModules * sizeof(Module)));
 
     // Allocate grid buffers
     
@@ -223,8 +225,6 @@ void Simulation::initSimulation(Terrain* terrain)
     initGridBuffers(gridCount, dev_temp, dev_oldtemp, dev_vel, dev_oldvel, dev_smokedensity, dev_oldsmokedensity, dev_pressure, M_in);
 
     dim3 modules_fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
-    dim3 nodes_fullBlocksPerGrid((numOfNodes + blockSize - 1) / blockSize);
-    dim3 edges_fullBlocksPerGrid((numOfEdges + blockSize - 1) / blockSize);
     
     kernInitModules << <modules_fullBlocksPerGrid, blockSize >> > (numOfModules, dev_nodes, dev_edges, dev_modules);
 
@@ -247,7 +247,7 @@ void Simulation::initSimulation(Terrain* terrain)
 struct is_negative
 {
     __host__ __device__
-        bool operator()(int& x)
+        bool operator()(int x)
     {
         return x < 0;
     }
@@ -256,7 +256,7 @@ struct is_negative
 struct is_nonnegative
 {
     __host__ __device__
-        bool operator()(int& x)
+        bool operator()(int x)
     {
         return x >= 0;
     }
@@ -278,7 +278,7 @@ void Simulation::stepSimulation(float dt)
     // TODO: implement
     const dim3 gridDim(blocksNeeded(gridCount.x, M_IX), blocksNeeded(gridCount.y, M_IY), blocksNeeded(gridCount.z, M_IZ));
     
-    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_modules, dev_deltaM);
+    //kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_moduleIndices, dev_modules, dev_deltaM);
 
     // Update air temperature
     // update drag forces (wind)
@@ -334,19 +334,25 @@ void Simulation::stepSimulation(float dt)
 
     // For each module in the forest
     // cull modules (and their children) that have zero mass
-    // TODO: implement
-    thrust::device_ptr<int> thrust_indices = 
-        thrust::device_ptr<int>(dev_moduleIndices);
-
-    int numCulled = thrust::count_if(thrust::device, thrust_indices, thrust_indices + numOfModules * sizeof(int), is_negative());
-    numOfModules -= numCulled;
-
-    // help
-    //thrust::copy_if(thrust::device, thrust_indices, thrust_indices + numOfModules * sizeof(int), thrust_indices_pingpong, is_nonnegative());
 
     kernCullModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_moduleIndices, dev_modules, dev_edges);
 
-    // update dev_numOfModules and stream compact dev_moduleIndices
+    // stream compaction
+    thrust::device_ptr<int> thrust_indices = 
+        thrust::device_pointer_cast(dev_moduleIndices);
+    thrust::device_ptr<int> thrust_temp =
+        thrust::device_pointer_cast(dev_temp_moduleIndices);
+
+    int numCulled = thrust::count_if(thrust_indices, thrust_indices + numOfModules * sizeof(int), is_negative());
+    thrust::copy_if(thrust_indices, thrust_indices + numOfModules * sizeof(int), thrust_temp, is_nonnegative());
+
+    // update data
+    numOfModules -= numCulled;
+    dev_moduleIndices = thrust::raw_pointer_cast(thrust_indices);
+    dev_temp_moduleIndices = thrust::raw_pointer_cast(thrust_temp);
+
+    // ping pong buffers
+    std::swap(dev_moduleIndices, dev_temp_moduleIndices);
 
     cudaDeviceSynchronize();
 }

@@ -28,7 +28,7 @@ struct Edge
     float length;
     float radiiRatio;
     glm::vec3 direction;
-    bool culled;
+    bool culled = false;
 };
 
 struct Module
@@ -43,7 +43,6 @@ struct Module
     int endModule; // module edge pointer
     // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
 
-
     // module-level parameters
     float temperature;
     float mass, deltaM; 
@@ -52,6 +51,8 @@ struct Module
     float startArea; // lateral surface area before combustion
     float moduleConstant;
     float waterContent;
+
+    bool culled = false;
 };
 
 struct ModuleEdge

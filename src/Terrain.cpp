@@ -173,6 +173,7 @@ bool Terrain::loadScene(std::string filename)
 					Edge edge;
 					edge.fromNode = it->first;
 					edge.toNode = nodeInx;
+					edge.culled = false;
 
 					Node& node = nodes[nodeInx];
 					edge.length = glm::distance(prevNode.position, node.position);
@@ -191,10 +192,11 @@ bool Terrain::loadScene(std::string filename)
 			module.lastNode = nodes.size() - 1;
 			module.startEdge = startEdge;
 			module.lastEdge = edges.size() - 1;
+			module.culled = false;
 			module.previousNode = -1;
 			// update module's previous node
 			Node& rootNode = nodes[moduleStartNode];
-			// if not root module of tree
+			// // if not root module of tree
 			for (int i = treeStartModule; i < modules.size(); i++)
 			{
 				// go through every module in the tree to see where this module
@@ -213,11 +215,11 @@ bool Terrain::loadScene(std::string filename)
 						if (moduleMap.find(i) == moduleMap.end())
 						{
 							std::vector<int> list;
-							list.push_back(modules.size() - 1);
+							list.push_back(modules.size());
 							moduleMap.insert(std::pair<int, std::vector<int>>(i, list));
 						}
 						else
-							moduleMap.at(i).push_back(modules.size() - 1);
+							moduleMap.at(i).push_back(modules.size());
 						break;
 					}
 				}
