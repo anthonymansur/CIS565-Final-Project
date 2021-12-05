@@ -221,7 +221,17 @@ void mainLoop(int NUM_OF_BRANCHES)
         /** Draw smoke */
         glUseProgram(program[PROG_fluid]);
         glBindVertexArray(VAO_smoke);
+        glDisable(GL_CULL_FACE);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
         glDrawElements(GL_TRIANGLES, 6 * gridCount.x * gridCount.y * gridCount.z, GL_UNSIGNED_INT, 0);
+
+        glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
 
 
         glfwSwapBuffers(window);
@@ -344,17 +354,19 @@ void initSmokeQuads() {
     GLuint* smokeIndexes = new GLuint[6 * nflat]; // 2 triangles
 
     // setting up positions for square faces
+    int shift_x = gridSize.x / 2.f;
+    int shift_z = gridSize.z / 2.f;
     for (unsigned int x = 0; x < gridCount.x; x++) {
         for (unsigned int y = 0; y < gridCount.y; y++) {
             for (unsigned int z = 0; z < gridCount.z; z++) {
                 std::array<float, numFloatsPerCell> vertexes = {
-                    x * sideLength, y * sideLength, z * sideLength,
+                    x * sideLength - shift_x, y * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    x * sideLength, y * sideLength, (z + 1) * sideLength,
+                    x * sideLength - shift_x, y * sideLength, (z + 1) * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    x * sideLength, (y + 1) * sideLength, (z + 1) * sideLength,
+                    x * sideLength - shift_x, (y + 1) * sideLength, (z + 1) * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    x * sideLength, (y + 1) * sideLength, z * sideLength,
+                    x * sideLength - shift_x, (y + 1) * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f
                 };
                 std::copy(vertexes.begin(), vertexes.end(),
@@ -366,13 +378,13 @@ void initSmokeQuads() {
         for (unsigned int y = 0; y < gridCount.x; y++) {
             for (unsigned int z = 0; z < gridCount.z; z++) {
                 std::array<float, numFloatsPerCell> vertexes = {
-                    x * sideLength, y * sideLength, z * sideLength,
+                    x * sideLength - shift_x, y * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    (x + 1) * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength - shift_x, y * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    (x + 1) * sideLength, y * sideLength, (z + 1) * sideLength,
+                    (x + 1) * sideLength - shift_x, y * sideLength, (z + 1) * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    x * sideLength, y * sideLength, (z + 1) * sideLength,
+                    x * sideLength - shift_x, y * sideLength, (z + 1) * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f
                 };
                 std::copy(vertexes.begin(), vertexes.end(),
@@ -384,13 +396,13 @@ void initSmokeQuads() {
         for (unsigned int y = 0; y < gridCount.y; y++) {
             for (unsigned int z = 0; z < gridCount.z; z++) {
                 std::array<float, numFloatsPerCell> vertexes = {
-                    x * sideLength, y * sideLength, z * sideLength,
+                    x * sideLength - shift_x, y * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    (x + 1) * sideLength, y * sideLength, z * sideLength,
+                    (x + 1) * sideLength - shift_x, y * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    (x + 1) * sideLength, (y + 1) * sideLength, z * sideLength,
+                    (x + 1) * sideLength - shift_x, (y + 1) * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f,
-                    x * sideLength, (y + 1) * sideLength, z * sideLength,
+                    x * sideLength - shift_x, (y + 1) * sideLength, z * sideLength - shift_z,
                     0.f, 0.f, 0.f, 0.f
                 };
                 std::copy(vertexes.begin(), vertexes.end(),
