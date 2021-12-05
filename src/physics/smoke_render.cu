@@ -120,6 +120,7 @@ __global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, float*
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
     const int k_z = threadIdx.z + blockDim.z * blockIdx.z;
+
     if ((k_x >= gridCount.x ) || (k_y >= gridCount.y ) || (k_z >= gridCount.z)) return;
     const int k = sflatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
     if(isnan(d_smokeRadiance[k]) || isinf(d_smokeRadiance[k])) d_smokeRadiance[k] = 0;
@@ -130,12 +131,40 @@ __global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, float*
     unsigned int numPerQuad = 4 * (3 + 4); // 3 floats verts + 4 floats col
     unsigned int offsetQuad = k * numPerQuad;
     unsigned int offsetInner = 3; // vec3 = 3 uchar4
+    unsigned int offsetXZ = numPerQuad * gridCount.x * gridCount.y * gridCount.z;
+    unsigned int offsetXY = 2 * numPerQuad * gridCount.x * gridCount.y * gridCount.z;
+    // plane offset
     
     for(unsigned int i = 0; i < 4; i++){
+        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = 0.8f;// intensity;
+        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = 0.1f;//intensity;
+        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = 0.1f;//intensity;
+        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = transparency;
+
+        //dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = 0.1f;//intensity;
+        //dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = 0.8f;//intensity;
+        //dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = 0.1f;//intensity;
+        //dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = transparency;
+
+        //dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = 0.1f;//intensity;
+        //dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = 0.1f;//intensity;
+        //dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = 0.8f;//intensity;
+        //dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = transparency;
+
         dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
         dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
         dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
         dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = transparency;
+
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = transparency;
+
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = transparency;
     }
 
 }

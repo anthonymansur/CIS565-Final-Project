@@ -227,7 +227,7 @@ void mainLoop(int NUM_OF_BRANCHES)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glDrawElements(GL_TRIANGLES, 6 * gridCount.x * gridCount.y * gridCount.z, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 3 * 6 * gridCount.x * gridCount.y * gridCount.z, GL_UNSIGNED_INT, 0);
 
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
@@ -353,7 +353,7 @@ void initSmokeQuads() {
     const unsigned int numFloatsPerCell = (3 + 4) * 4; // 3 floats from pos 4 floats from col, and we have 4 verts per quad
     GLuint nflat = gridCount.x * gridCount.y * gridCount.z;
     GLfloat* smokeQuadsPositions = new GLfloat[3 * numFloatsPerCell * nflat];
-    GLuint* smokeIndexes = new GLuint[6 * nflat]; // 2 triangles
+    GLuint* smokeIndexes = new GLuint[3 * 6 * nflat]; // 2 triangles
 
     // setting up positions for square faces
     int shift_x = gridSize.x / 2.f;
@@ -419,7 +419,7 @@ void initSmokeQuads() {
         }
     }
 
-    for (GLuint i = 0; i < 6 * nflat; i += 6) {
+    for (GLuint i = 0; i < 3 * 6 * nflat; i += 6) {
         GLuint offset = (i / 6) * 4;
         smokeIndexes[i] = offset;
         smokeIndexes[i + 1] = offset + 1;
@@ -439,7 +439,7 @@ void initSmokeQuads() {
     glBufferData(GL_ARRAY_BUFFER, 3 * nflat * numFloatsPerCell * sizeof(GLfloat), smokeQuadsPositions, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO_smoke);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * nflat * sizeof(GLuint), smokeIndexes, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 6 * nflat * sizeof(GLuint), smokeIndexes, GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), (void*)0);
