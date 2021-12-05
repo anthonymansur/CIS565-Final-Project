@@ -39,6 +39,8 @@ float* dev_deltaM;
 
 Terrain* m_terrain;
 
+float totalTime = 0.f;
+
 /******************
 * initSimulation *
 ******************/
@@ -103,6 +105,8 @@ void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
 
 void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength, float* d_out)
 {
+    totalTime += dt;
+
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
     // For each module in the forest
@@ -153,7 +157,7 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
-    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
+    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance, totalTime);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());
