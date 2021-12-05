@@ -383,9 +383,9 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
     __syncthreads();
     d_smoke[k] = ds;
 # if __CUDA_ARCH__>=200
-    if (d_smoke[k] != 0.f) {
+    /*if (d_smoke[k] != 0.f) {
         printf("d_smoke[%d] = %f\n", k, d_smoke[k]);
-    }
+    }*/
 
 
 #endif 

@@ -196,6 +196,11 @@ bool Terrain::loadScene(std::string filename)
 			module.previousNode = -1;
 			module.startModule = -1;
 			module.endModule = -1;
+
+			if (module.startNode == module.lastNode)
+				module.startEdge = module.lastEdge = -1.f;
+				
+
 			// update module's previous node
 			Node& rootNode = nodes[moduleStartNode];
 			// // if not root module of tree
@@ -355,6 +360,7 @@ bool Terrain::loadScene(std::string filename)
 	{
 		Module& module = modules[i];
 		std::vector<glm::vec4> coms;
+		if (module.startEdge < 0 || module.lastEdge < 0) continue;
 		for (int j = module.startEdge; j <= module.lastEdge; j++)
 		{
 			Edge& edge = edges[j];

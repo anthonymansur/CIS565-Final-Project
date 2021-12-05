@@ -71,13 +71,13 @@ __device__ const float rho = 500; // WARNING: see note below.
  * @brief Temperature diffusion coeff. (wood)
  * @note range: XXX, units: 1 m^2 s^-1
  */
- float alpha = 0.02; // TODO: first paper had different numbers?
+__device__ float alpha = 0.02; // TODO: first paper had different numbers?
 
  /**
  * @brief Temperature diffusion coeff. (module)
  * @note range: XXX, units: 1 m^2 s^-1
  */
- float alpha_M = 0.75;
+__device__ float alpha_M = 0.75;
 
 /**
  * @brief Heat transfer coeff. for dry wood 
@@ -97,6 +97,9 @@ __device__ const float b_wet = 0.1 * B_DRY;
  * @note range: 0.5362 kg water per kg of wood
  */
 __device__ const float c_WM = 0.5362;
+
+/** TODO: add description */
+__device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
 
 /*******************
 * Device Functions *
@@ -229,8 +232,7 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
 __device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
-    float alpha = A_M /* * 0.001*/; // TODO: tuning
-    float diffusion = alpha * (T_adj - T); // TODO: implement diffusion. see eq. (30)
+    float diffusion = alpha_M * (T_adj - T); // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy
     float changeOfEnergy = 0 /*(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M)*/;
@@ -269,7 +271,6 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
 }
 
 // TODO: add prototype to header file
-// TODO: this throws an error!!!
 __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
 {
     Module& module = modules[moduleInx];
@@ -285,7 +286,7 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
         float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
         lap += (adj.temperature - module.temperature) / (dist * dist);
     }
-    return lap;
+    return 0.01 * lap; // TODO: tune coefficient
 }
 
 /**********
@@ -298,8 +299,12 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     if (index >= N) return;
 
     Module& module = modules[index];
-    float area;
-    float mass;
+
+    if (module.startEdge < 0 || module.lastEdge < 0)
+        return;
+
+    float area = 0.f;
+    float mass = 0.f;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
         // for every edge in the module
@@ -352,8 +357,6 @@ __global__ void kernInitIndices(int N, int* indices)
 
 __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
 {
-    const float MASS_EPSILON = 0.001;
-
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
@@ -363,8 +366,10 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     Module& module = modules[moduleIndex];
     Node& rootNode = nodes[module.startNode];
 
+    float oldMass = module.mass;
+
     // Module needs to be culled
-    if (module.mass < MASS_EPSILON) return;
+    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0) return;
 
     /** 1. update the mass */
     // calculate the current state of the module
@@ -394,7 +399,7 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float windSpeed = 0; // TODO: implement
     float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
     
-    deltaM = 0.f; // TODO: remove!
+    //deltaM = -0.007f; // TODO: remove!
 
 
     module.mass += deltaM;
@@ -481,19 +486,18 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
 // TODO: cull children of modules
 __global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge* edges)
 {
-    const float MASS_EPSILON = 0.001; // TODO: find the proper value for this
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
     Module& module = modules[moduleIndices[index]];
 
     // check if module needs to be culled
-    if (module.mass < MASS_EPSILON)
+    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
         moduleIndices[index] = -1; // cull the module
 
         // for every edge in the module, cull it so it isn't rendered
-        for (int i = module.startEdge; i <= module.lastEdge; i++)
+        for (int i = module.startEdge; i <= module.lastEdge && i >= 0; i++)
         {
 
             Edge& edge = edges[i];

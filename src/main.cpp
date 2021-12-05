@@ -1,3 +1,5 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 // includes
 #include <iostream>
 #include <cstdlib>
@@ -33,7 +35,7 @@ Camera camera = Camera(width / (height * 1.f));
 Terrain terrain;
 
 GLuint program[2];
-const char* attributeLocations_terrain[] = { "pos" };
+const char* attributeLocations_terrain[] = { "pos", "texCoords"};
 GLuint VAO_terrain;
 GLuint IBO_terrain;
 GLuint VBO_terrain;
@@ -41,6 +43,8 @@ GLuint VBO_terrain;
 const char* attributeLocations_branches[] = { "v0", "v1", "attrib"};
 GLuint VAO_branches;
 GLuint VBO_branches;
+
+unsigned int texture;
 
 const unsigned int PROG_terrain = 0;
 const unsigned int PROG_branches = 1;
@@ -62,14 +66,12 @@ int main(int argc, char* argv[])
     projectName = "CIS-565 Final Project: Wildfire Simulation";
 
     terrain.loadScene("../scenes/scene1.ply");
-    //terrain.loadTestScene();
 
     if (init(argc, argv))
     {        
         camera.UpdateOrbit(0, -25, -15);
         camera.updateCamera(program, 2);
         Simulation::initSimulation(&terrain);
-        //Simulation::endSimulation();
         // TODO: generate terrain
         mainLoop(terrain.edges.size());
         return 0;
@@ -154,7 +156,8 @@ bool init(int argc, char** argv)
     initShaders(program);
 
     // GL enables go here 
-    //glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
 
     return true;
 }
@@ -191,7 +194,9 @@ void mainLoop(int NUM_OF_BRANCHES)
 
         // GL commands go here for visualization
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
-        glClear(GL_COLOR_BUFFER_BIT /* | GL_DEPTH_BUFFER_BIT */);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+        glBindTexture(GL_TEXTURE_2D, texture);
 
         /** Draw terrain */
         glUseProgram(program[PROG_terrain]);
@@ -247,7 +252,7 @@ void initShaders(GLuint* program) {
     program[PROG_terrain] = glslUtility::createProgram(
         "shaders/shader.vert",
         /*"shaders/graphics.geom.glsl",*/
-        "shaders/shader.frag", attributeLocations_terrain, 1);
+        "shaders/shader.frag", attributeLocations_terrain, 2);
     program[PROG_branches] = glslUtility::createProgram(
         "shaders/branches.vert.glsl",
         "shaders/branches.geom.glsl",
@@ -283,11 +288,19 @@ void initVAO(int NUM_OF_BRANCHES) {
     float terrainSize = 25.f;
     GLfloat vertices[] =
     {
-        -terrainSize, 0.0f, -terrainSize, // bottom left
-        -terrainSize, 0.0f, terrainSize, // top left
-        terrainSize, 0.f, terrainSize, // top right
-        terrainSize, 0.f, -terrainSize // bottom right
+        -terrainSize, 0.0f, -terrainSize,  -1.0f, -1.0f, // bottom left
+        -terrainSize, 0.0f, terrainSize, -1.0f, 1.0f, // top left
+        terrainSize, 0.f, terrainSize, 1.0f, 1.0f, // top right
+        terrainSize, 0.f, -terrainSize, 1.0f, -1.0f // bottom right
     };
+
+    //GLfloat texCoords[] = 
+    //{
+    //    -1.0f, 0.0f, -1.0f,
+    //    -1.0f, 0.0f, 1.0f,
+    //    1.0f, 0.0f, 1.0f,
+    //    1.0f, 0.0f, -1.0f
+    //};
 
     GLushort indices[] =
     {
@@ -306,8 +319,34 @@ void initVAO(int NUM_OF_BRANCHES) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO_terrain);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); 
+    // position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    // texture
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); //texture wrapping
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); //texture filtering
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int texWidth, texHeight, texChannels;
+    unsigned char* pixels = stbi_load("shaders/forestGround.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    if (!pixels) {
+        //throw std::runtime_error("Failed to load texture image");
+        std::cout << "Texture Failure" << std::endl;
+    }
+    else {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    stbi_image_free(pixels);
 
     /** Branches */
     std::unique_ptr<GLfloat[]> branches{ new GLfloat[10 * NUM_OF_BRANCHES] };
