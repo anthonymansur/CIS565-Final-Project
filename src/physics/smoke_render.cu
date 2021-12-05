@@ -132,10 +132,6 @@ __global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, float*
     unsigned int offsetInner = 3; // vec3 = 3 uchar4
     
     for(unsigned int i = 0; i < 4; i++){
-        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = 60 / 255.f;
-        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = 60 / 255.f;
-        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = 60 / 255.f;
-        //dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = 60 / 255.f;
         dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
         dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
         dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;

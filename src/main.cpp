@@ -330,24 +330,26 @@ int flatten(const int i_x, const int i_y, const int i_z) {
     return i_x + i_y * gridCount.x + i_z * gridCount.y * gridCount.z;
 }
 
+void recomputeIndices(int axis) {
+    GLuint nflat = gridCount.x * gridCount.y * gridCount.z;
+    const unsigned int numFloatsPerCell = (3 + 4) * 4;
+    GLuint* smokeIndexes = new GLuint[6 * nflat]; // 2 triangles
+
+    for (GLuint i = 0; i < 6 * nflat; i += 6) {
+        GLuint offset = (i / 6) * 4 + (nflat * axis * numFloatsPerCell);
+        smokeIndexes[i] = offset;
+        smokeIndexes[i + 1] = offset + 1;
+        smokeIndexes[i + 2] = offset + 2;
+        smokeIndexes[i + 3] = offset;
+        smokeIndexes[i + 4] = offset + 2;
+        smokeIndexes[i + 5] = offset + 3;
+    }
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO_smoke);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * nflat * sizeof(GLuint), smokeIndexes, GL_DYNAMIC_DRAW);
+}
+
 void initSmokeQuads() {
-    float terrainSize = 25.f;
-
-    GLfloat vertices[] =
-    {
-        -terrainSize, 5.0f, -terrainSize, // bottom left
-        -terrainSize, 5.0f, terrainSize, // top left
-        terrainSize, 5.f, terrainSize, // top right
-        terrainSize, 5.f, -terrainSize // bottom right
-    };
-
-    GLushort indices[] =
-    {
-        0, 1, 2, 0, 2, 3
-    };
-
-    // MIGHT NEED DYNAMIC_DRAW FOR COLOR UPDATE SINCE IT CHANGES
-
     const unsigned int numFloatsPerCell = (3 + 4) * 4; // 3 floats from pos 4 floats from col, and we have 4 verts per quad
     GLuint nflat = gridCount.x * gridCount.y * gridCount.z;
     GLfloat* smokeQuadsPositions = new GLfloat[3 * numFloatsPerCell * nflat];
@@ -356,6 +358,8 @@ void initSmokeQuads() {
     // setting up positions for square faces
     int shift_x = gridSize.x / 2.f;
     int shift_z = gridSize.z / 2.f;
+
+    // YZ plane
     for (unsigned int x = 0; x < gridCount.x; x++) {
         for (unsigned int y = 0; y < gridCount.y; y++) {
             for (unsigned int z = 0; z < gridCount.z; z++) {
@@ -374,6 +378,8 @@ void initSmokeQuads() {
             }
         }
     }
+
+    // XZ plane
     for (unsigned int x = 0; x < gridCount.x; x++) {
         for (unsigned int y = 0; y < gridCount.x; y++) {
             for (unsigned int z = 0; z < gridCount.z; z++) {
@@ -392,6 +398,8 @@ void initSmokeQuads() {
             }
         }
     }
+
+    // XY plane
     for (unsigned int x = 0; x < gridCount.x; x++) {
         for (unsigned int y = 0; y < gridCount.y; y++) {
             for (unsigned int z = 0; z < gridCount.z; z++) {
@@ -431,7 +439,7 @@ void initSmokeQuads() {
     glBufferData(GL_ARRAY_BUFFER, 3 * nflat * numFloatsPerCell * sizeof(GLfloat), smokeQuadsPositions, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO_smoke);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * nflat * sizeof(GLuint), smokeIndexes, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * nflat * sizeof(GLuint), smokeIndexes, GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), (void*)0);
