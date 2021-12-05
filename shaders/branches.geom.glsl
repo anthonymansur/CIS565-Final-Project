@@ -88,22 +88,22 @@ void main()
         vec3 leaf1_p1 = g0.xyz + r1 * norm1;
         vec3 leaf1_p2 = g0.xyz + (r1 * 3.0) * axis;
         vec3 leaf1_p3 = g0.xyz + (r1 * 5.0) * norm1;
-        vec3 leaf1_p4 = g0.xyz + (r1 * 5.0) * -axis;
+        vec3 leaf1_p4 = g0.xyz - (r1 * -5.0) * axis;
 
         vec3 leaf2_p1 = g0.xyz + r1 * norm2;
         vec3 leaf2_p2 = g0.xyz + (r1 * 3.0) * axis;
         vec3 leaf2_p3 = g0.xyz + (r1 * 5.0) * norm2;
-        vec3 leaf2_p4 = g0.xyz + (r1 * 5.0) * -axis;
+        vec3 leaf2_p4 = g0.xyz - (r1 * -5.0) * axis;
 
         vec3 leaf3_p1 = g0.xyz + r1 * norm3;
         vec3 leaf3_p2 = g0.xyz + (r1 * 3.0) * axis;
         vec3 leaf3_p3 = g0.xyz + (r1 * 5.0) * norm3;
-        vec3 leaf3_p4 = g0.xyz + (r1 * 5.0) * -axis;
+        vec3 leaf3_p4 = g0.xyz - (r1 * -5.0) * axis;
 
         vec3 leaf4_p1 = g0.xyz + r1 * norm4;
         vec3 leaf4_p2 = g0.xyz + (r1 * 3.0) * axis;
         vec3 leaf4_p3 = g0.xyz + (r1 * 5.0) * norm4;
-        vec3 leaf4_p4 = g0.xyz + (r1 * 5.0) * -axis;
+        vec3 leaf4_p4 = g0.xyz - (r1 * -5.0) * axis;
 
         gl_Position = u_projMatrix * vec4(leaf1_p1, 1.0);
         EmitVertex();
@@ -158,22 +158,22 @@ void main()
         vec3 leaf1_p1 = g0.xyz + r2 * norm1;
         vec3 leaf1_p2 = g0.xyz + (r2 * 3.0) * axis;
         vec3 leaf1_p3 = g0.xyz + (r2 * 5.0) * norm1;
-        vec3 leaf1_p4 = g0.xyz + (r2 * 5.0) * -axis;
+        vec3 leaf1_p4 = g0.xyz - (r2 * -5.0) * axis;
 
         vec3 leaf2_p1 = g0.xyz + r2 * norm2;
         vec3 leaf2_p2 = g0.xyz + (r2 * 3.0) * axis;
         vec3 leaf2_p3 = g0.xyz + (r2 * 5.0) * norm2;
-        vec3 leaf2_p4 = g0.xyz + (r2 * 5.0) * -axis;
+        vec3 leaf2_p4 = g0.xyz - (r2 * -5.0) * axis;
 
         vec3 leaf3_p1 = g0.xyz + r2 * norm3;
         vec3 leaf3_p2 = g0.xyz + (r2 * 3.0) * axis;
         vec3 leaf3_p3 = g0.xyz + (r2 * 5.0) * norm3;
-        vec3 leaf3_p4 = g0.xyz + (r2 * 5.0) * -axis;
+        vec3 leaf3_p4 = g0.xyz - (r2 * -5.0) * axis;
 
         vec3 leaf4_p1 = g0.xyz + r2 * norm4;
         vec3 leaf4_p2 = g0.xyz + (r2 * 3.0) * axis;
         vec3 leaf4_p3 = g0.xyz + (r2 * 5.0) * norm4;
-        vec3 leaf4_p4 = g0.xyz + (r2 * 5.0) * -axis;
+        vec3 leaf4_p4 = g0.xyz - (r2 * -5.0) * axis;
 
         gl_Position = u_projMatrix * vec4(leaf1_p1, 1.0);
         EmitVertex();
