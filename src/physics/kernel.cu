@@ -142,15 +142,13 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    //float* h_temp = (float*)malloc(sizeof(float) * 20 * 20 * 20);
-    //cudaMemcpy(h_temp, dev_temp, sizeof(float) * 20 * 20 * 20, cudaMemcpyDeviceToHost);
+    //float* h_out = (float*)malloc(sizeof(float) * 28 * 2);
+    //cudaMemcpy(h_out, d_out, sizeof(float) * 28 * 2, cudaMemcpyDeviceToHost);
     //int num = 0;
-    //for (int i = 0; i < 20 * 20 * 20; i++) {
-    //    //if (h_temp[i] != 20.0f && h_temp[i] != 0.f) printf("index: %d, value: %f\n", i, h_temp[i]);
-    //    if (h_temp[i] != 20.0f && h_temp[i] != 0.f) num++;
+    //for (int i = 0; i < 28 * 2; i++) {
+    //    printf("d_out[%d] = %f\n", i, h_out[i]);
     //}
-    //printf("%d\n", num);
-    //free(h_temp);
+    //free(h_out);
 
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);

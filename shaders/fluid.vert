@@ -9,6 +9,6 @@ out vec4 f_col;
 
 void main() {
     gl_Position = u_projMatrix * u_model * vec4(pos, 1.0);
-    //f_col = col;
-    f_col = vec4(col.xyz, 0.05f);
+    f_col = col;
+    //f_col = vec4(col.xyz, 0.05f);
 }

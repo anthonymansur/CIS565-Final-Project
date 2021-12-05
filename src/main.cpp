@@ -254,7 +254,6 @@ void runCUDA()
     // cudaEventCreate(&stop);
 
     // cudaEventRecord(start);
-
     // // What you want to time goes here
     Simulation::stepSimulation(DT, gridCount, gridSize, sideLength, d_out);
 
