@@ -281,6 +281,9 @@ void initShaders(GLuint* program) {
     if ((location = glGetUniformLocation(program[PROG_branches], "u_projMatrix")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
     }
+    if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
+        glUniform1i(location, false);
+    }
 }
 
 void initVAO(int NUM_OF_BRANCHES) {
@@ -338,7 +341,7 @@ void initVAO(int NUM_OF_BRANCHES) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int texWidth, texHeight, texChannels;
-    unsigned char* pixels = stbi_load("shaders/forestGround.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    unsigned char* pixels = stbi_load("shaders/forest-ground.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
         //throw std::runtime_error("Failed to load texture image");
         std::cout << "Texture Failure" << std::endl;
@@ -396,6 +399,22 @@ void errorCallback(int error, const char *description) {
   void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
       glfwSetWindowShouldClose(window, GL_TRUE);
+    }
+    GLuint location;
+    if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+    {
+        // render tree normally
+        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
+            glUniform1i(location, false);
+        }
+    }
+    if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+    {
+        // render temperature
+
+        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
+            glUniform1i(location, true);
+        }
     }
   }
 
