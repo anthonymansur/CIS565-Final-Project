@@ -7,6 +7,7 @@ layout (points) in;
 layout (triangle_strip, max_vertices=102) out;
 
 uniform mat4 u_projMatrix;
+uniform bool u_renderLeaves;
 
 in vec4 geo_v0[];
 in vec4 geo_v1[];
@@ -67,7 +68,7 @@ void main()
     }
     EndPrimitive();
     
-    if (geo_attrib[0].x > 0 && geo_attrib[0].y > 0)
+    if (geo_attrib[0].x > 0 && geo_attrib[0].y > 0 && u_renderLeaves)
     {
         /** Render Leaves */
         float rand1 = noise1D(g1.x * g1.y * g1.z, g0.x * g0.y * g0.z);

@@ -49,6 +49,9 @@ unsigned int texture;
 const unsigned int PROG_terrain = 0;
 const unsigned int PROG_branches = 1;
 
+// gui variables
+static bool renderLeaves = true;
+
 // functions
 bool init(int argc, char** argv);
 void initShaders(GLuint* program);
@@ -284,6 +287,9 @@ void initShaders(GLuint* program) {
     if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
         glUniform1i(location, false);
     }
+    if ((location = glGetUniformLocation(program[PROG_branches], "u_renderLeaves")) != -1) {
+        glUniform1i(location, renderLeaves);
+    }
 }
 
 void initVAO(int NUM_OF_BRANCHES) {
@@ -414,6 +420,14 @@ void errorCallback(int error, const char *description) {
 
         if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
             glUniform1i(location, true);
+        }
+    }
+    if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+    {
+        // render temperature
+        renderLeaves = !renderLeaves;
+        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderLeaves")) != -1) {
+            glUniform1i(location, renderLeaves);
         }
     }
   }
