@@ -184,10 +184,11 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     }
     free(h_out);*/
 
-    //float* h_smoke = (float*)malloc(sizeof(float) * 28 * 2);
-    //cudaMemcpy(h_smoke, dev_smokedensity, sizeof(float) * 28 * 2, cudaMemcpyDeviceToHost);
+    //float* h_smoke = (float*)malloc(sizeof(float) * 28 * 24);
+    //cudaMemcpy(h_smoke, dev_smokedensity, sizeof(float) * 28 * 24, cudaMemcpyDeviceToHost);
     //int num = 0;
-    //for (int i = 0; i < 28 * 2; i++) {
+    //for (int i = 0; i < 28 * 24; i++) {
+    //    if (h_smoke[i] > 0.f)
     //    printf("d_smoke[%d] = %f\n", i, h_smoke[i]);
     //}
     //free(h_smoke);

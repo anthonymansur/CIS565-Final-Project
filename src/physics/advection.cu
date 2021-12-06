@@ -381,8 +381,8 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
     ds -= (SMOKE_MASS * d_delta_m[k]) + (EVAP * SMOKE_WATER * d_delta_m[k]);
 
     __syncthreads();
-    //d_smoke[k] = ds;
-    d_smoke[k] += 0.1f;
+    d_smoke[k] = ds;
+    //d_smoke[k] += 0.1f;
 }
 
 void initGridBuffers(
