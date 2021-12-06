@@ -4,7 +4,7 @@
 
 #version 330 core
 layout (points) in;
-layout (triangle_strip, max_vertices=100) out;
+layout (triangle_strip, max_vertices=102) out;
 
 uniform mat4 u_projMatrix;
 
@@ -18,6 +18,9 @@ out float frag_height;
 
 // function prototypes
 vec3 createPerpendicular(vec3 p1, vec3 p2);
+vec3 genNormal(vec3 p, vec3 axis, int seed);
+float noise1D(vec2 p);
+float noise1D(float a, float b);
 
 void main() 
 {    
@@ -29,9 +32,9 @@ void main()
     vec4 g0 = vec4(geo_v0[0].x, geo_v0[0].y * 1.35, geo_v0[0].z, geo_v0[0].w);
     vec4 g1 = vec4(geo_v1[0].x, geo_v1[0].y * 1.35, geo_v1[0].z, geo_v1[0].w);
     // find the axis and tangent vectors
-    vec3 axis = g1.xyz - g0.xyz;
+    vec3 axis = normalize(g1.xyz - g0.xyz);
     vec3 perpX = createPerpendicular(g1.xyz, g0.xyz);
-    vec3 perpY = cross(normalize(axis), perpX);
+    vec3 perpY = cross(axis, perpX);
 
     // subdivision
     for (int i = 0; i < 16; i++) {
@@ -62,9 +65,76 @@ void main()
         frag_height = geo_v1[0].y;
         EmitVertex();
     }
+    EndPrimitive();
+    
+    if (geo_attrib[0].x > 0 && geo_attrib[0].y > 0)
+    {
+        /** Render Leaves */
+        // TODO: implement
+        int leavesPerUnitLength = 200; // TODO: add some noise
+        float leaf_length = 0.1; // TODO: add some noise
+        int leaf_color;
 
-    /** Render Leaves */
-    // TODO: implement
+        float rand = noise1D(g0.x * g0.y * g0.z, g1.x * g1.y * g1.z);
+        if (rand < 0.33)
+            leaf_color = 0;
+        else if (rand < 0.66)
+            leaf_color = 1;
+        else 
+            leaf_color = 2;
+
+        float len = distance(g0, g1);
+        for (int i = 0; i < (leavesPerUnitLength * distance(g0.xyz, g1.xyz)); i++)
+        {
+            // calculate the leaf axis
+            float dist = i / (leavesPerUnitLength * distance(g0.xyz, g1.xyz)); // TODO: add noise here
+            vec3 posAlongBranch = g0.xyz + len * dist;
+            vec3 leaf_axis = genNormal(posAlongBranch, axis, i);
+
+            // calculate the leaf start position
+            vec3 orth = cross(axis, leaf_axis);
+            vec3 startPos = posAlongBranch + orth * (r1 + (r2 - r1) * dist);
+            startPos = startPos + orth * 0.1; // offset; // TODO: add noise here
+
+            // calculate the leaf normal
+            vec3 leaf_norm = genNormal(startPos, leaf_axis, i);
+            vec3 leaf_orth = cross(leaf_axis, leaf_norm);
+            
+            // calculate the vertices that make up the leaf
+            // TODO: create different shapes
+            // diamond shape
+            vec3 pos1 = startPos + leaf_axis * (leaf_length / 2) - leaf_orth *  (leaf_length / 2);
+            vec3 pos2 = startPos + leaf_axis * (leaf_length / 2) + leaf_orth *  (leaf_length / 2);
+            vec3 pos3 = startPos + leaf_axis * leaf_length;
+            gl_Position = u_projMatrix * vec4(startPos, 1.0);
+            frag_attrib.x = 1.0f;
+            frag_attrib.y = leaf_color;
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos1, 1.0);
+            frag_attrib.x = 1.0f;  
+            frag_attrib.y = leaf_color;     
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos3, 1.0);
+            frag_attrib.x = 1.0f;    
+            frag_attrib.y = leaf_color;   
+            EmitVertex();
+
+            gl_Position = u_projMatrix * vec4(startPos, 1.0);
+            frag_attrib.x = 1.0f;
+            frag_attrib.y = leaf_color;
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos2, 1.0);
+            frag_attrib.x = 1.0f;    
+            frag_attrib.y = leaf_color;   
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos3, 1.0);
+            frag_attrib.x = 1.0f;    
+            frag_attrib.y = leaf_color;   
+            EmitVertex();
+
+            EndPrimitive();
+        }
+    }
 }  
 
 // function implementations
@@ -76,4 +146,20 @@ vec3 createPerpendicular(vec3 p1, vec3 p2) {
         ret = cross(norm, vec3(0.0, 1.0, 0.0));
 
     return ret;
+}
+
+// Taken from CIS 460
+float noise1D(vec2 p)
+{
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float noise1D(float a, float b)
+{
+    return noise1D(vec2(a, b));
+}
+
+vec3 genNormal(vec3 p, vec3 axis, int seed)
+{
+    vec3 tangent = vec3(noise1D(p.x, seed), noise1D(p.y, seed), noise1D(p.z, seed));
+    return cross(axis, normalize(tangent));
 }

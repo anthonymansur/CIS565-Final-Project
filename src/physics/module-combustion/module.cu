@@ -344,8 +344,9 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.deltaM = 0;
     module.temperature = T_amb;
 
-    if (index < 4000)
-        module.temperature = 300;
+    // primitive combustion
+    /*if (index < 4000)
+        module.temperature = 300;*/
 
     module.waterContent = 0;
 }
