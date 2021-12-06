@@ -2,6 +2,11 @@
 #include<cuda.h>
 #define _USE_MATH_DEFINES // Keep above math.h import
 #include <math.h> 
+#include <array>
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include <cuda_gl_interop.h>
 
 #include "../Terrain.h"
 #include "module-combustion/module.h"
@@ -30,8 +35,8 @@ __device__ float BUOY_ALPHA = 0.3f;             // smoke density modifier for bu
 __device__ float BUOY_BETA = 0.1f;              // temperature modifier for buoyancy force computation
 __device__ int SEMILAGRANGIAN_ITERS = 5;        // number of iterations for semi-lagrangian advection solve
 __device__ float VORTICITY_EPSILON = 1.f;       // scalar for amount of dissipated energy added back to system
-__device__ float TEMPERATURE_ALPHA = 0.02f;      // temperature diffusion coefficient
-__device__ float TEMPERATURE_GAMMA = 0.003f;     // radiative cooling coefficient
+__device__ float TEMPERATURE_ALPHA = 8e-5;      // temperature diffusion coefficient
+__device__ float TEMPERATURE_GAMMA = -4e-9;     // radiative cooling coefficient
 __device__ int PRESSURE_JACOBI_ITERATIONS = 10; // number of iterations for jacobi pressure solve
 __device__ float EVAP = 0.5362f;                // module water to mass ratio
 __device__ float SMOKE_MASS = 16.f;             // smoke mass contribution coefficient

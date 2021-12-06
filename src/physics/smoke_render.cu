@@ -78,12 +78,6 @@ __global__ void smokeLightKernel(int3 gridCount, float3 gridSize, float blockSiz
         //voxelRadiance[k] += ray_transparency;
         voxelRadiance[k] += SMOKE_ALBEDO * SMOKE_LIGHT_RADIANCE * voxelTransp * ray_transparency;
         ray_transparency *= 1-voxelTransp;
-//# if __CUDA_ARCH__>=200
-//        printf("radiance[%d] = %f, voxelTransp = %f, ray_transp = %f\n", k, voxelRadiance[k], voxelTransp, ray_transparency);
-//        printf("smoke[%d] = %f\n", k, d_smoke[k]);
-//
-//#endif 
-
 
         tMax.x = (blockSize - fmod((ray_orig + t*ray_dir).x(), blockSize))/ray_dir.x();
         tMax.y = (blockSize - fmod((ray_orig + t*ray_dir).y(), blockSize))/ray_dir.y();
@@ -111,9 +105,6 @@ __global__ void smokeLightKernel(int3 gridCount, float3 gridSize, float blockSiz
         }
     __syncthreads();
     }
-
-
-    
 }
 __global__ void resetSmokeRadiance(int3 gridCount, float * voxelRadiance){
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
@@ -124,6 +115,7 @@ __global__ void resetSmokeRadiance(int3 gridCount, float * voxelRadiance){
     
     voxelRadiance[k] = 0.f;
 }
+
 __global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, float* dev_out, const float* d_smoke, float* d_smokeRadiance) {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;

@@ -296,6 +296,13 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     // Backtracing 
     float3 estimated = pos - 2 * alpha_m;
 
+//
+//# if __CUDA_ARCH__>=200
+//    printf("Estimated = x: %f, y: %f, z: %f\n", estimated.x, estimated.y, estimated.z);
+//    printf("pos = x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
+//    printf("blockSize = %f\n", blockSize);
+//#endif 
+
     // Clipping
     if (estimated.x < blockSize) estimated.x = blockSize;
     if (estimated.y < blockSize) estimated.y = blockSize;
@@ -324,13 +331,22 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
 
     // mass contribution
     float dtm = TAU * d_deltaM[k];
+    if (dtm > 0) dtm *= -1.0f; // temporary fix for positive change in mass
 
     d_temp[k] = -dtm + dt + dtR * 2 * DELTA_T;
-    //# if __CUDA_ARCH__>=200
-    //if (d_temp[k] != 20.f) 
+    # if __CUDA_ARCH__>=200
+    //if (d_temp[k] != 20.f) {
     //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtR = %f\n", k, d_temp[k], dtm, dt, dtR);
-
-    //#endif 
+    //}
+    //if (lap[k] != 0.0f) {
+    //    printf("lap[%d] = %f\n", k, lap[k]);
+    //}
+    //if (d_deltaM[k] != 0.f) {
+    //    printf("%f\n", d_deltaM[k]);
+    //}
+    
+       
+    #endif 
 }
 
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 
@@ -359,8 +375,10 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
     // Contribution to smoke density due to advection of fluid
     float ds = scalarLinearInt(gridCount, blockSize, d_oldsmoke, estimated, 0.f);
 
-    // Contribution to smoke density due to mass loss and evaporation
-    ds += (SMOKE_MASS * d_delta_m[k]) + (EVAP * SMOKE_WATER * d_delta_m[k]);
+    if (d_delta_m[k] > 0) d_delta_m[k] *= -1.0f;
+
+    // Contribution to smoke density due to mass loss and evaporation (d_delta_m is negative)
+    ds -= (SMOKE_MASS * d_delta_m[k]) + (EVAP * SMOKE_WATER * d_delta_m[k]);
 
     __syncthreads();
     //d_smoke[k] = ds;

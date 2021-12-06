@@ -109,8 +109,6 @@ bool Terrain::loadScene(std::string filename)
 		header.clear();
 	}
 		
-	
-	
 	std::vector<std::string> tokens;
 	int lastSeenTree = 0;
 	int lastSeenModule = 0;
@@ -175,6 +173,7 @@ bool Terrain::loadScene(std::string filename)
 					Edge edge;
 					edge.fromNode = it->first;
 					edge.toNode = nodeInx;
+					edge.culled = false;
 
 					Node& node = nodes[nodeInx];
 					edge.length = glm::distance(prevNode.position, node.position);
@@ -193,10 +192,18 @@ bool Terrain::loadScene(std::string filename)
 			module.lastNode = nodes.size() - 1;
 			module.startEdge = startEdge;
 			module.lastEdge = edges.size() - 1;
+			module.culled = false;
 			module.previousNode = -1;
+			module.startModule = -1;
+			module.endModule = -1;
+
+			if (module.startNode == module.lastNode)
+				module.startEdge = module.lastEdge = -1.f;
+				
+
 			// update module's previous node
 			Node& rootNode = nodes[moduleStartNode];
-			// if not root module of tree
+			// // if not root module of tree
 			for (int i = treeStartModule; i < modules.size(); i++)
 			{
 				// go through every module in the tree to see where this module
@@ -215,11 +222,11 @@ bool Terrain::loadScene(std::string filename)
 						if (moduleMap.find(i) == moduleMap.end())
 						{
 							std::vector<int> list;
-							list.push_back(modules.size() - 1);
+							list.push_back(modules.size());
 							moduleMap.insert(std::pair<int, std::vector<int>>(i, list));
 						}
 						else
-							moduleMap.at(i).push_back(modules.size() - 1);
+							moduleMap.at(i).push_back(modules.size());
 						break;
 					}
 				}
@@ -353,6 +360,7 @@ bool Terrain::loadScene(std::string filename)
 	{
 		Module& module = modules[i];
 		std::vector<glm::vec4> coms;
+		if (module.startEdge < 0 || module.lastEdge < 0) continue;
 		for (int j = module.startEdge; j <= module.lastEdge; j++)
 		{
 			Edge& edge = edges[j];

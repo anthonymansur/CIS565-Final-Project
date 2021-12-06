@@ -11,7 +11,7 @@
  */
 __device__ const float T0 = 150, T1 = 450;
 
-__device__ const float T_amb = 15; // TODO: move elsewhere?
+__device__ const float T_amb = 20.f; // TODO: move elsewhere?
 
 /**
  * @brief the saturation temperature of water
@@ -71,13 +71,13 @@ __device__ const float rho = 500; // WARNING: see note below.
  * @brief Temperature diffusion coeff. (wood)
  * @note range: XXX, units: 1 m^2 s^-1
  */
- float alpha = 0.02; // TODO: first paper had different numbers?
+__device__ float alpha = 0.02; // TODO: first paper had different numbers?
 
  /**
  * @brief Temperature diffusion coeff. (module)
  * @note range: XXX, units: 1 m^2 s^-1
  */
- float alpha_M = 0.75;
+__device__ float alpha_M = 0.75;
 
 /**
  * @brief Heat transfer coeff. for dry wood 
@@ -97,6 +97,9 @@ __device__ const float b_wet = 0.1 * B_DRY;
  * @note range: 0.5362 kg water per kg of wood
  */
 __device__ const float c_WM = 0.5362;
+
+/** TODO: add description */
+__device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
 
 /*******************
 * Device Functions *
@@ -157,13 +160,17 @@ __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, fl
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
     float k = computeReactionRate(temp, windSpeed);
+
+    // TODO: verify this is correct, as it's throwing nan
     return -1 * k * c * frontArea;
 }
 
-// TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 {
-    float moduleConstant = sqrt(3 / M_PI * rho);
+    /** Replace code with what's commented for simplier solution */
+    //Node& node = nodes[module.startNode];
+    //return node.radius / sqrt((3 / (M_PI * rho)) * module.mass);
+
     float sum = 0;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
@@ -171,22 +178,24 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 
         Edge* edge = &edges[i]; // will be updated
         float l = edge->length;
+        float lambda = edge->radiiRatio;
         float prod = 1;
-        do
+
+        // check to see if fromNode isn't the root node
+        while (edge->fromNode != module.startNode)
         {
-            // For every edge in the path of the module's root node to the 
-            // edge's from node, traversing first from the edge's from node
-            // to the root node, do the following: 
+            // Need to traverse every edge in the path from root node to 
+            // the initial edge's fromNode. To do so, we will do the following
+            
+            // go to the current node's previous edge
+            int nodeInx = edge->fromNode;
+            edge = &edges[nodes[nodeInx].previousEdge];
 
-            float lambda = edge->radiiRatio;
-            prod *= (lambda * lambda) * (1 + lambda + lambda * lambda);
-
-            // get previous edge if not at the first edge
-            if (edge->fromNode != module.startNode)
-                edge = &edges[nodes[edge->fromNode].previousEdge];
-        } while (edge->fromNode != module.startNode);     
-
-        sum += l * prod;
+            // compute the product
+            float _lambda = edge->radiiRatio;
+            prod *= (_lambda * _lambda);
+        }
+        sum += l * prod * (1 + lambda + lambda * lambda);
     }
 
     return 1 / sqrt(sum);
@@ -205,27 +214,25 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
     float prod = 1;
     do
     {
-        // For every edge in the path of the module's root node to the 
-        // edge's from node, traversing first from the edge's from node
-        // to the root node, do the following: 
+        // Need to traverse every edge in the path from root node to 
+        // the node given. To do so, we will do the following
 
-        // TODO: use previous edge instead find the parent 
-        edge = &edges[nodes[currNodeInx].previousEdge]; 
-        prod *= edge->radiiRatio * rootRadius; 
-
-        // update currNode
+        // go to the current node's previous edge
+        Node& node = nodes[currNodeInx];
+        edge = &edges[node.previousEdge];
         currNodeInx = edge->fromNode;
-    } while (edge->fromNode != module.startNode); 
 
-    return prod;
+        // compute the product
+        prod *= edge->radiiRatio;
+    } while (currNodeInx != module.startNode);
+    return prod * rootRadius;
 }
 
 // TODO: diffusion of adjacent modules not yet correctlyimplemented
 __device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
-    float alpha = A_M * 0.001; // TODO: tuning
-    float diffusion = alpha * (T_adj - T); // TODO: implement diffusion. see eq. (30)
+    float diffusion = alpha_M * (T_adj - T); // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy
     float changeOfEnergy = 0 /*(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M)*/;
@@ -238,26 +245,15 @@ __device__ float rateOfWaterChange(float changeInMass)
     return c_WM * changeInMass;
 }
 
-// NOTE: this is a very basic implementation. May need to be updated.
-__device__ glm::vec3 centerOfMass(Module& module)
-{
-    glm::vec3 center;
-    for (int i = 0; i < 3; i++)
-        center[i] = (module.boundingMax[i] + module.boundingMin[i]) * 0.5f;
-    return center;
-}
-
 // TODO: transfer these function calls to the fluid solver
 __device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.deltaM;
+    return (1 - glm::distance(x, module.centerOfMass) / dx) * module.deltaM;
 }
 
 __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.waterContent;
+    return (1 - glm::distance(x, module.centerOfMass) / dx) * module.waterContent;
 }
 
 __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
@@ -275,16 +271,22 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
 }
 
 // TODO: add prototype to header file
-__device__ float getAdjacentModuleTemperatures(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
+__device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
 {
     Module& module = modules[moduleInx];
-    float temp = 0.f;
+    float lap = 0.f;
+
+    if (module.startModule < 0 || module.endModule < 0)
+        return 0.f; 
+
     for (int i = module.startModule; i <= module.endModule; i++)
     {
         Module& adj = modules[moduleEdges[i].moduleInx];
-        temp += adj.temperature;
+        if (adj.culled) continue;
+        float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
+        lap += (adj.temperature - module.temperature) / (dist * dist);
     }
-    return temp / (module.endModule - module.startModule + 1);
+    return 0.01 * lap; // TODO: tune coefficient
 }
 
 /**********
@@ -297,8 +299,12 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     if (index >= N) return;
 
     Module& module = modules[index];
-    float area;
-    float mass;
+
+    if (module.startEdge < 0 || module.lastEdge < 0)
+        return;
+
+    float area = 0.f;
+    float mass = 0.f;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
         // for every edge in the module
@@ -334,21 +340,36 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.boundingMax = maxPos;
 
     module.deltaM = 0;
-    if (index == 1)
-        module.temperature = (T0 + T1) / 2; // set module 1 on fire
-    else
-        module.temperature = T_amb;
+    //if (index == 1)
+    //    module.temperature = (T0 + T1) / 2; // set module 1 on fire
+    //else
+    module.temperature = T_amb;
     module.waterContent = 0;
 }
 
-__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
+__global__ void kernInitIndices(int N, int* indices)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
+    indices[index] = index;
+}
+
+__global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    int moduleIndex = moduleIndices[index];
+
     /** for each module in the forest */
-    Module& module = modules[index];
-    Node& rootNode = nodes[modules->startNode];
+    Module& module = modules[moduleIndex];
+    Node& rootNode = nodes[module.startNode];
+
+    float oldMass = module.mass;
+
+    // Module needs to be culled
+    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0) return;
 
     /** 1. update the mass */
     // calculate the current state of the module
@@ -378,6 +399,9 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
     float windSpeed = 0; // TODO: implement
     float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
     
+    //deltaM = -0.007f; // TODO: remove!
+
+
     module.mass += deltaM;
     module.deltaM = deltaM;
 
@@ -397,8 +421,8 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
     // TODO: sync threads here?
 
     /** 3. Update temperature */
-    float T = getAverageValue(gridTemp, gridCount, blockSize, module.boundingMin, module.boundingMax);
-    float T_adj = getAdjacentModuleTemperatures(modules, moduleEdges, index);
+    float T = getEnvironmentTempAtModule(module, gridTemp, gridCount, blockSize);
+    float T_adj = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
     float A_M = area; 
@@ -419,7 +443,7 @@ __device__ int m_idxClip(int idx, int idxMax) {
 __device__ int m_flatten(int col, int row, int z, int width, int height, int depth) {
     return m_idxClip(col, width) + m_idxClip(row, height) * width + m_idxClip(z, depth) * width * height;
 }
-__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass)
+__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, int* moduleIndices, Module* modules, float* gridOfMass)
 {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -437,47 +461,47 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     float deltaM = 0;
     for (int i = 0; i < numOfModules; i++)
     {
-        if (checkModuleIntersection(modules[i], glmPos))
+        if (checkModuleIntersection(modules[moduleIndices[i]], glmPos))
             deltaM += getDeltaMassOfModuleAtPoint(modules[i], glmPos, blockSize);
     }
     gridOfMass[k] = deltaM;
 }
 
-// TODO: may need to change implementation
-__device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max)
+__device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize)
 {
-    // convert terrain-space to grid-space coordinates // e.g. (-10,10) to (0, 20)
-    min.x += floor(gridCount.x * blockSize / 2);
-    min.y += floor(gridCount.y * blockSize / 2);
-    min.z += floor(gridCount.z * blockSize / 2);
-    max.x += floor(gridCount.x * blockSize / 2);
-    max.y += floor(gridCount.y * blockSize / 2);
-    max.z += floor(gridCount.z * blockSize / 2);
+    // Convert center of mass to grid-space coordinates // e.g. (-10,10) to (0, 20)
+    glm::vec3 com = module.centerOfMass;
+    com.x += floor(gridCount.x * blockSize / 2);
+    com.y += floor(gridCount.y * blockSize / 2);
+    com.z += floor(gridCount.z * blockSize / 2);
 
-    glm::vec3 minPoint, maxPoint;
+    // get the grid at this location
     for (int i = 0; i < 2; i++)
-    {
-        // get the min and max coord
-        minPoint[i] = blockSize * round(min[i] / blockSize); // TODO: is there a better way to do this?
-        maxPoint[i] = blockSize * round(max[i] / blockSize);
-    }
+        com[i] = blockSize * round(com[i] / blockSize);
+    int inx = m_flatten(com.x, com.y, com.z, gridCount.x, gridCount.y, gridCount.z);
 
-    // iterate over all the grid cells
-    float sum = 0.f;
-    int num = 0;
-    for (float i = minPoint.x; i <= maxPoint.x; i += blockSize)
+    return temp[inx];
+}
+
+// TODO: cull children of modules
+__global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge* edges)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    Module& module = modules[moduleIndices[index]];
+
+    // check if module needs to be culled
+    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
-        for (float j = minPoint.y; j <= maxPoint.y; j += blockSize)
+        moduleIndices[index] = -1; // cull the module
+
+        // for every edge in the module, cull it so it isn't rendered
+        for (int i = module.startEdge; i <= module.lastEdge && i >= 0; i++)
         {
-            for (float k = minPoint.z; k <= maxPoint.z; k += blockSize)
-            {
-                if ((i >= gridCount.x) || (j >= gridCount.y) || (k >= gridCount.z)) continue;
-                int inx = m_flatten(i, j, k, gridCount.x, gridCount.y, gridCount.z);
-                sum += buffer[inx];
-                num++;
-            }
+
+            Edge& edge = edges[i];
+            edge.culled = true;
         }
     }
-
-    return num > 0 ? (sum / num) : 0;
 }

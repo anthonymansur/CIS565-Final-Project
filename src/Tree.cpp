@@ -32,8 +32,8 @@ void addEdge(Terrain* terrain, int edge, int fromNode, int toNode)
         glm::distance(terrain->nodes[fromNode].position, terrain->nodes[toNode].position);
     terrain->edges[edge].radiiRatio = 
         terrain->nodes[toNode].radius / terrain->nodes[fromNode].radius;
-    terrain->edges[edge].direction = 
-        glm::normalize(terrain->nodes[toNode].position - terrain->nodes[fromNode].position);
+    //terrain->edges[edge].direction = 
+    //    glm::normalize(terrain->nodes[toNode].position - terrain->nodes[fromNode].position);
 }
 
 void updateNodeAdjcacencyPtrs(Terrain* terrain, int node, int start, int end, int prev)
