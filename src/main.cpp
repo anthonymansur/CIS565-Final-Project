@@ -61,6 +61,9 @@ int3 gridCount = { 24, 8, 24 };
 float3 gridSize = { 60.f, 20.f, 60.f };
 float sideLength = 2.5f; // "blockSize"
 
+// gui variables
+static bool renderLeaves = true;
+
 // functions
 bool init(int argc, char** argv);
 void initShaders(GLuint* program);
@@ -317,6 +320,13 @@ void initShaders(GLuint* program) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
     }
 
+    if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
+        glUniform1i(location, false);
+    }
+    if ((location = glGetUniformLocation(program[PROG_branches], "u_renderLeaves")) != -1) {
+        glUniform1i(location, renderLeaves);
+    }
+
     glUseProgram(program[PROG_fluid]);
 
     if ((location = glGetUniformLocation(program[PROG_fluid], "u_projMatrix")) != -1) {
@@ -509,7 +519,7 @@ void initVAO(int NUM_OF_BRANCHES) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int texWidth, texHeight, texChannels;
-    unsigned char* pixels = stbi_load("shaders/forestGround.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    unsigned char* pixels = stbi_load("shaders/forest-ground.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
         //throw std::runtime_error("Failed to load texture image");
         std::cout << "Texture Failure" << std::endl;
@@ -521,20 +531,21 @@ void initVAO(int NUM_OF_BRANCHES) {
     stbi_image_free(pixels);
 
     /** Branches */
-    std::unique_ptr<GLfloat[]> branches{ new GLfloat[10 * NUM_OF_BRANCHES] };
+    std::unique_ptr<GLfloat[]> branches{ new GLfloat[11 * NUM_OF_BRANCHES] };
 
     for (int i = 0; i < NUM_OF_BRANCHES; i++)
     {
-        branches[10 * i + 0] = 0.0f;
-        branches[10 * i + 1] = 0.0f;
-        branches[10 * i + 2] = 0.0f;
-        branches[10 * i + 3] = 0.0f;
-        branches[10 * i + 4] = 0.0f;
-        branches[10 * i + 5] = 0.0f;
-        branches[10 * i + 6] = 0.0f;
-        branches[10 * i + 7] = 0.0f;
-        branches[10 * i + 8] = 0.0f;
-        branches[10 * i + 9] = 0.0f;
+        branches[11 * i + 0] = 0.0f;
+        branches[11 * i + 1] = 0.0f;
+        branches[11 * i + 2] = 0.0f;
+        branches[11 * i + 3] = 0.0f;
+        branches[11 * i + 4] = 0.0f;
+        branches[11 * i + 5] = 0.0f;
+        branches[11 * i + 6] = 0.0f;
+        branches[11 * i + 7] = 0.0f;
+        branches[11 * i + 8] = 0.0f;
+        branches[11 * i + 9] = 0.0f;
+        branches[11 * i + 10] = 0.0f;
     }
 
 
@@ -544,16 +555,16 @@ void initVAO(int NUM_OF_BRANCHES) {
 
     glBindVertexArray(VAO_branches);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_branches);
-    glBufferData(GL_ARRAY_BUFFER,  NUM_OF_BRANCHES * (10 * sizeof(GLfloat)), branches.get(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,  NUM_OF_BRANCHES * (11 * sizeof(GLfloat)), branches.get(), GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)0);
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)(4 * sizeof(GLfloat)));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(4 * sizeof(GLfloat)));
 
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)(8 * sizeof(GLfloat)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(8 * sizeof(GLfloat)));
 
     glBindVertexArray(0);
 }
@@ -566,6 +577,30 @@ void errorCallback(int error, const char *description) {
   void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
       glfwSetWindowShouldClose(window, GL_TRUE);
+    }
+    GLuint location;
+    if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+    {
+        // render tree normally
+        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
+            glUniform1i(location, false);
+        }
+    }
+    if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+    {
+        // render temperature
+
+        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
+            glUniform1i(location, true);
+        }
+    }
+    if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+    {
+        // render temperature
+        renderLeaves = !renderLeaves;
+        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderLeaves")) != -1) {
+            glUniform1i(location, renderLeaves);
+        }
     }
   }
 

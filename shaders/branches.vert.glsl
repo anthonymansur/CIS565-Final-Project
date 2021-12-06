@@ -1,11 +1,11 @@
 #version 330
 layout (location = 0) in vec4 v0;
 layout (location = 1) in vec4 v1;
-layout (location = 2) in vec2 attrib;
+layout (location = 2) in vec3 attrib;
 
 out vec4 geo_v0;
 out vec4 geo_v1;
-out vec2 geo_attrib;
+out vec3 geo_attrib;
 
 void main() {
    geo_v0 = v0;

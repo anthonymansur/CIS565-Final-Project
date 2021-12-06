@@ -11,7 +11,7 @@
  */
 __device__ const float T0 = 150, T1 = 450;
 
-__device__ const float T_amb = 20.f; // TODO: move elsewhere?
+__device__ const float T_amb = 15.f; // TODO: move elsewhere?
 
 /**
  * @brief the saturation temperature of water
@@ -100,6 +100,8 @@ __device__ const float c_WM = 0.5362;
 
 /** TODO: add description */
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
+__device__ const float MAX_DELTA_M = 0.0001;
+__device__ const float MAX_DELTA_T = 0.001;
 
 /*******************
 * Device Functions *
@@ -235,7 +237,7 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float 
     float diffusion = alpha_M * (T_adj - T); // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy
-    float changeOfEnergy = 0 /*(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M)*/;
+    float changeOfEnergy = 0;//(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M);
 
     return diffusion + temp_diff - changeOfEnergy; 
 }
@@ -340,10 +342,12 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.boundingMax = maxPos;
 
     module.deltaM = 0;
-    //if (index == 1)
-    //    module.temperature = (T0 + T1) / 2; // set module 1 on fire
-    //else
     module.temperature = T_amb;
+
+    // primitive combustion
+    /*if (index < 4000)
+        module.temperature = 300;*/
+
     module.waterContent = 0;
 }
 
@@ -397,10 +401,12 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float H = heightOfPyrolyzingFront(H0, A0, mass);
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
-    float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
-    
-    //deltaM = -0.007f; // TODO: remove!
+    float deltaM = glm::clamp(rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
 
+    if (moduleIndex < 12500 && module.temperature > 150)
+        deltaM = -0.0005f;
+    else
+        deltaM = 0.f;
 
     module.mass += deltaM;
     module.deltaM = deltaM;
@@ -427,7 +433,12 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float W = 0; // TODO: get the water content
     float A_M = area; 
     float V_M = module.mass / rho;
-    float deltaT = rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M);
+    float deltaT = glm::clamp(rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M), 0.f, MAX_DELTA_T);
+
+    if (moduleIndex < 12500 && module.temperature < 449)
+        deltaT = 0.5f;
+    else
+        deltaT = 0.f;
 
     module.temperature += deltaT;
 

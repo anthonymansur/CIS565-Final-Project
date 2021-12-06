@@ -4,46 +4,40 @@
 
 #version 330 core
 layout (points) in;
-layout (triangle_strip, max_vertices=100) out;
-//layout (points, max_vertices=1) out;
-//layout (points, max_vertices=1) out;
+layout (triangle_strip, max_vertices=102) out;
 
 uniform mat4 u_projMatrix;
+uniform bool u_renderLeaves;
 
 in vec4 geo_v0[];
 in vec4 geo_v1[];
-in vec2 geo_attrib[];
+in vec3 geo_attrib[];
 
-out float frag_attrib;
-out vec3 aNormal;
-out float y_coord;
+out vec2 frag_attrib;
+out vec3 frag_normal;
+out float frag_height;
 
-vec3 createPerpendicular(vec3 p1, vec3 p2) {
-    vec3 norm = normalize(p2 - p1);
-    vec3 ret = cross(norm, vec3(0.0, 0.0, 1.0));
-
-    if (length(ret) == 0.0)
-        ret = cross(norm, vec3(0.0, 1.0, 0.0));
-
-    return ret;
-}
+// function prototypes
+vec3 createPerpendicular(vec3 p1, vec3 p2);
+vec3 genNormal(vec3 p, vec3 axis, int seed);
+float noise1D(vec2 p);
+float noise1D(float a, float b);
 
 void main() 
 {    
+    /** Render branch cones */
+    // scale radii
     float r1 = geo_v0[0].w * 2.0;
-    float leaf_r1 = r1 * 5.0;
     float r2 = geo_v1[0].w * 2.0;
-    float leaf_r2 = r2 * 5.0;
+    // scale height of trees
     vec4 g0 = vec4(geo_v0[0].x, geo_v0[0].y * 1.35, geo_v0[0].z, geo_v0[0].w);
     vec4 g1 = vec4(geo_v1[0].x, geo_v1[0].y * 1.35, geo_v1[0].z, geo_v1[0].w);
-    vec3 axis = g1.xyz - g0.xyz;
+    // find the axis and tangent vectors
+    vec3 axis = normalize(g1.xyz - g0.xyz);
     vec3 perpX = createPerpendicular(g1.xyz, g0.xyz);
-    vec3 perpY = cross(normalize(axis), perpX);
-    vec3 norm1;
-    vec3 norm2;
-    vec3 norm3;
-    vec3 norm4;
+    vec3 perpY = cross(axis, perpX);
 
+    // subdivision
     for (int i = 0; i < 16; i++) {
 
         float a = i / 15.0 * 2.0 * 3.1415926;
@@ -54,176 +48,121 @@ void main()
                             ca * perpX.y + sa * perpY.y,
                             ca * perpX.z + sa * perpY.z );
 
-        if (i == 0) {
-            norm1 = normal;
-        }
-        if (i == 4) {
-            norm2 = normal;
-        }
-        if (i == 8) {
-            norm3 = normal;
-        }
-        if (i == 12) {
-            norm3 = normal;
-        }
-
-        aNormal = normal;
+        frag_normal = normal;
 
         vec3 p1 = g0.xyz + r1 * normal;
         vec3 p2 = g1.xyz + r2 * normal;
 
-        frag_attrib = -1.0f;
-
+        // Generate vertices
         gl_Position = u_projMatrix * vec4(p1, 1.0);
+        frag_attrib.x = -1.0f;
+        frag_attrib.y = geo_attrib[0].z;
+        frag_height = geo_v0[0].y;
         EmitVertex();
+
         gl_Position = u_projMatrix * vec4(p2, 1.0);
+        frag_attrib.x = -1.0f;
+        frag_attrib.y = geo_attrib[0].z;
+        frag_height = geo_v1[0].y;
         EmitVertex();
     }
     EndPrimitive();
+    
+    if (geo_attrib[0].x > 0 && geo_attrib[0].y > 0 && u_renderLeaves)
+    {
+        /** Render Leaves */
+        float rand1 = noise1D(g1.x * g1.y * g1.z, g0.x * g0.y * g0.z);
+        float rand2 = noise1D(g0.x * g0.y * g0.z, g1.x * g1.y * g1.z);
 
-   if (geo_attrib[0].x > -1.0f) {
-        // draw leaf at node 1
-        frag_attrib = 1.0f;
+        int leavesPerUnitLength = 200; // TODO: add some noise
+        float leaf_length = 0.05 + 0.1 * rand1; // TODO: add some noise
+        int leaf_color;
 
-        vec3 leaf1_p1 = g0.xyz + r1 * norm1;
-        vec3 leaf1_p2 = g0.xyz + (r1 * 3.0) * axis;
-        vec3 leaf1_p3 = g0.xyz + (r1 * 5.0) * norm1;
-        vec3 leaf1_p4 = g0.xyz - (r1 * -5.0) * axis;
+        if (rand2 < 0.55)
+            leaf_color = 0;
+        else if (rand2 < 0.85)
+            leaf_color = 1;
+        else 
+            leaf_color = 2;
 
-        vec3 leaf2_p1 = g0.xyz + r1 * norm2;
-        vec3 leaf2_p2 = g0.xyz + (r1 * 3.0) * axis;
-        vec3 leaf2_p3 = g0.xyz + (r1 * 5.0) * norm2;
-        vec3 leaf2_p4 = g0.xyz - (r1 * -5.0) * axis;
+        float len = distance(g0, g1);
+        for (int i = 0; i < (leavesPerUnitLength * distance(g0.xyz, g1.xyz)); i++)
+        {
+            // calculate the leaf axis
+            float dist = i / (leavesPerUnitLength * distance(g0.xyz, g1.xyz)); // TODO: add noise here
+            vec3 posAlongBranch = g0.xyz + len * dist;
+            vec3 leaf_axis = genNormal(posAlongBranch, axis, i);
 
-        vec3 leaf3_p1 = g0.xyz + r1 * norm3;
-        vec3 leaf3_p2 = g0.xyz + (r1 * 3.0) * axis;
-        vec3 leaf3_p3 = g0.xyz + (r1 * 5.0) * norm3;
-        vec3 leaf3_p4 = g0.xyz - (r1 * -5.0) * axis;
+            // calculate the leaf start position
+            vec3 orth = cross(axis, leaf_axis);
+            vec3 startPos = posAlongBranch /*+ orth * (r1 + (r2 - r1) * dist)*/;
+            float offset = 0.5 * noise1D(g0.x * g0.y * g0.z * i, g1.x * g1.y * g1.z * i);
+            startPos = startPos + orth * offset; // offset;
 
-        vec3 leaf4_p1 = g0.xyz + r1 * norm4;
-        vec3 leaf4_p2 = g0.xyz + (r1 * 3.0) * axis;
-        vec3 leaf4_p3 = g0.xyz + (r1 * 5.0) * norm4;
-        vec3 leaf4_p4 = g0.xyz - (r1 * -5.0) * axis;
+            // calculate the leaf normal
+            vec3 leaf_norm = genNormal(startPos, leaf_axis, i);
+            vec3 leaf_orth = cross(leaf_axis, leaf_norm);
+            
+            // calculate the vertices that make up the leaf
+            // TODO: create different shapes
+            // diamond shape
+            vec3 pos1 = startPos + leaf_axis * (leaf_length / 2) - leaf_orth *  (leaf_length / 2);
+            vec3 pos2 = startPos + leaf_axis * (leaf_length / 2) + leaf_orth *  (leaf_length / 2);
+            vec3 pos3 = startPos + leaf_axis * leaf_length;
+            gl_Position = u_projMatrix * vec4(startPos, 1.0);
+            frag_attrib.x = 1.0f;
+            frag_attrib.y = leaf_color;
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos1, 1.0);
+            frag_attrib.x = 1.0f;  
+            frag_attrib.y = leaf_color;     
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos3, 1.0);
+            frag_attrib.x = 1.0f;    
+            frag_attrib.y = leaf_color;   
+            EmitVertex();
 
-        gl_Position = u_projMatrix * vec4(leaf1_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf1_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf1_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf1_p4, 1.0);
-        EmitVertex();
+            gl_Position = u_projMatrix * vec4(startPos, 1.0);
+            frag_attrib.x = 1.0f;
+            frag_attrib.y = leaf_color;
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos2, 1.0);
+            frag_attrib.x = 1.0f;    
+            frag_attrib.y = leaf_color;   
+            EmitVertex();
+            gl_Position = u_projMatrix * vec4(pos3, 1.0);
+            frag_attrib.x = 1.0f;    
+            frag_attrib.y = leaf_color;   
+            EmitVertex();
 
-        EndPrimitive();
-
-        gl_Position = u_projMatrix * vec4(leaf2_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf2_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf2_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf2_p4, 1.0);
-        EmitVertex();
-
-        EndPrimitive();
-
-        gl_Position = u_projMatrix * vec4(leaf3_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf3_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf3_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf3_p4, 1.0);
-        EmitVertex();
-
-        EndPrimitive();
-
-        gl_Position = u_projMatrix * vec4(leaf4_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf4_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf4_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf4_p4, 1.0);
-        EmitVertex();
-
-        EndPrimitive();
-
+            EndPrimitive();
+        }
     }
-
-    if (geo_attrib[0].y > -1.0f) {
-        // draw leaf at node 1
-        frag_attrib = 1.0f;
-
-        vec3 leaf1_p1 = g0.xyz + r2 * norm1;
-        vec3 leaf1_p2 = g0.xyz + (r2 * 3.0) * axis;
-        vec3 leaf1_p3 = g0.xyz + (r2 * 5.0) * norm1;
-        vec3 leaf1_p4 = g0.xyz - (r2 * -5.0) * axis;
-
-        vec3 leaf2_p1 = g0.xyz + r2 * norm2;
-        vec3 leaf2_p2 = g0.xyz + (r2 * 3.0) * axis;
-        vec3 leaf2_p3 = g0.xyz + (r2 * 5.0) * norm2;
-        vec3 leaf2_p4 = g0.xyz - (r2 * -5.0) * axis;
-
-        vec3 leaf3_p1 = g0.xyz + r2 * norm3;
-        vec3 leaf3_p2 = g0.xyz + (r2 * 3.0) * axis;
-        vec3 leaf3_p3 = g0.xyz + (r2 * 5.0) * norm3;
-        vec3 leaf3_p4 = g0.xyz - (r2 * -5.0) * axis;
-
-        vec3 leaf4_p1 = g0.xyz + r2 * norm4;
-        vec3 leaf4_p2 = g0.xyz + (r2 * 3.0) * axis;
-        vec3 leaf4_p3 = g0.xyz + (r2 * 5.0) * norm4;
-        vec3 leaf4_p4 = g0.xyz - (r2 * -5.0) * axis;
-
-        gl_Position = u_projMatrix * vec4(leaf1_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf1_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf1_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf1_p4, 1.0);
-        EmitVertex();
-
-        EndPrimitive();
-
-        gl_Position = u_projMatrix * vec4(leaf2_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf2_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf2_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf2_p4, 1.0);
-        EmitVertex();
-
-        EndPrimitive();
-
-        gl_Position = u_projMatrix * vec4(leaf3_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf3_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf3_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf3_p4, 1.0);
-        EmitVertex();
-
-        EndPrimitive();
-
-        gl_Position = u_projMatrix * vec4(leaf4_p1, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf4_p2, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf4_p3, 1.0);
-        EmitVertex();
-        gl_Position = u_projMatrix * vec4(leaf4_p4, 1.0);
-        EmitVertex();
-
-        EndPrimitive();
-
-    }
-
-    /*if (geo_attrib[0].y > -1.0f) {
-        // draw leaf at node 2
-    }*/
-
-    y_coord = geo_v0[0].y;
 }  
+
+// function implementations
+vec3 createPerpendicular(vec3 p1, vec3 p2) {
+    vec3 norm = normalize(p2 - p1);
+    vec3 ret = cross(norm, vec3(0.0, 0.0, 1.0));
+
+    if (length(ret) == 0.0)
+        ret = cross(norm, vec3(0.0, 1.0, 0.0));
+
+    return ret;
+}
+
+// Taken from CIS 460
+float noise1D(vec2 p)
+{
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float noise1D(float a, float b)
+{
+    return noise1D(vec2(a, b));
+}
+
+vec3 genNormal(vec3 p, vec3 axis, int seed)
+{
+    vec3 tangent = vec3(noise1D(p.x, seed), noise1D(p.y, seed), noise1D(p.z, seed));
+    return cross(axis, normalize(tangent));
+}
