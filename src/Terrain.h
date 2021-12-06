@@ -20,6 +20,8 @@ public:
 
     float gridSideLength;
 
+    int numberOfTrees;
+
     std::vector<Node> nodes;
     std::vector<Edge> edges;
     std::vector<Module> modules;

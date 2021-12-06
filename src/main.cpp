@@ -70,6 +70,12 @@ int main(int argc, char* argv[])
 
     terrain.loadScene("../scenes/scene1.ply");
 
+    std::cout << "Number of trees: " << terrain.numberOfTrees << std::endl;
+    std::cout << "Number of modules: " << terrain.modules.size() << std::endl;
+    std::cout << "Number of branches: " << terrain.edges.size() << std::endl;
+
+    //return 1;
+
     if (init(argc, argv))
     {        
         camera.UpdateOrbit(0, -25, -15);

@@ -117,6 +117,8 @@ bool Terrain::loadScene(std::string filename)
 	int moduleStartNode = 0;
 	int treeStartModule = 0;
 
+	int numOfTrees = 0;
+
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	bool stop = false;
 	while (!stop)
@@ -241,6 +243,7 @@ bool Terrain::loadScene(std::string filename)
 			if (updateTree)
 			{
 				/** new tree */
+				numOfTrees++;
 				// update the adjacency list of each module in the tree
 				int startEdge = edges.size();
 				for (std::map<int, std::vector<int>>::iterator it = moduleMap.begin(); it != moduleMap.end(); ++it)
@@ -385,6 +388,8 @@ bool Terrain::loadScene(std::string filename)
 	end = std::chrono::steady_clock::now();
 	std::cout << "This process took " << FIXED_FLOAT(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.f)<< " seconds." << std::endl;
 	
+	numberOfTrees = numOfTrees;
+
 	scene.close();
 	return true;
 }

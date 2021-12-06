@@ -32,8 +32,8 @@ int* dev_temp_moduleIndices;
 
 // Grid Dimensions
 // TODO: make these dynamic to the scene being loaded
-int3 gridCount = { 24, 8, 24 };        
-float3 gridSize = { 60.f, 20.f, 60.f };
+int3 gridCount = { 80, 12, 20 };        
+float3 gridSize = { 200.f, 30.f, 50.f };
 float sideLength = 2.5f; // "blockSize"
 
 // Grid Kernel Launch params
