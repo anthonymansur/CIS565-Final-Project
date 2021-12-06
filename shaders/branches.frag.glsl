@@ -30,7 +30,7 @@ void main()
             color = leaf_color2;
         else
             color = leaf_color3;
-        ambient = 0.45 * color.rgb;
+        ambient = 0.35 * color.rgb;
     }
     else
     {
@@ -43,10 +43,11 @@ void main()
             
         else
         {
-            if (frag_attrib.y >= 150)
-                color = 0.2 * vec4(.63, .58, .55, 1.0) + 0.8 * vec4(.81, .16, .01, 1.0);
-            else
-                color = vec4(.63, .58, .55, 1.0); 
+            float scale = clamp((300 - frag_attrib.y)/300, 0.f, 1.f);
+            float color1Scale = 0.5 + 0.5 * scale;
+            float color2Scale = 0.5 * (1-scale);
+            color = color1Scale * vec4(.63, .58, .55, 1.0) + // base
+                    color2Scale * vec4(.81, .16, .01, 1.0); // fire
         }
 
         ambient = ambientFactor(frag_height) * color.rgb; // ambient 
@@ -54,7 +55,7 @@ void main()
 
     // lambertian
     vec3 lightDir = vec3(0.2f, 1.0f, 0.3f); // diffuse
-    float diff = dot(frag_normal, lightDir);
+    float diff = clamp(dot(frag_normal, lightDir), 0.f, 1.f);
     vec3 diffuse = vec3(0.6f) * diff * color.rgb;
 
     outColor = vec4((ambient + diffuse), 1.0f);
@@ -69,7 +70,7 @@ vec4 temp_color(float temp)
         return vec4(1.f, 1.f, 0.f, 1.f);
     else
     {
-        float heat = (1 - ((450 - temp) / 450));
+        float heat = clamp(1 - ((300 - temp) / 300), 0.f, 1.f);
         return vec4(heat, 0, 1-heat, 1);
     }
 }

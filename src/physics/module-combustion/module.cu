@@ -402,10 +402,11 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
     float deltaM = glm::clamp(rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
-    
-    //deltaM = -0.007f; // TODO: remove!
-    //deltaM = 0;
 
+    if (moduleIndex < 12500 && module.temperature > 150)
+        deltaM = -0.0005f;
+    else
+        deltaM = 0.f;
 
     module.mass += deltaM;
     module.deltaM = deltaM;
@@ -432,9 +433,12 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float W = 0; // TODO: get the water content
     float A_M = area; 
     float V_M = module.mass / rho;
-    float deltaT = glm::clamp(rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M), -MAX_DELTA_T, 0.f);
+    float deltaT = glm::clamp(rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M), 0.f, MAX_DELTA_T);
 
-    //deltaT = 0;
+    if (moduleIndex < 12500 && module.temperature < 449)
+        deltaT = 0.5f;
+    else
+        deltaT = 0.f;
 
     module.temperature += deltaT;
 

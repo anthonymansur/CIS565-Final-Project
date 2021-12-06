@@ -70,15 +70,16 @@ void main()
     if (geo_attrib[0].x > 0 && geo_attrib[0].y > 0)
     {
         /** Render Leaves */
-        // TODO: implement
+        float rand1 = noise1D(g1.x * g1.y * g1.z, g0.x * g0.y * g0.z);
+        float rand2 = noise1D(g0.x * g0.y * g0.z, g1.x * g1.y * g1.z);
+
         int leavesPerUnitLength = 200; // TODO: add some noise
-        float leaf_length = 0.1; // TODO: add some noise
+        float leaf_length = 0.05 + 0.1 * rand1; // TODO: add some noise
         int leaf_color;
 
-        float rand = noise1D(g0.x * g0.y * g0.z, g1.x * g1.y * g1.z);
-        if (rand < 0.33)
+        if (rand2 < 0.55)
             leaf_color = 0;
-        else if (rand < 0.66)
+        else if (rand2 < 0.85)
             leaf_color = 1;
         else 
             leaf_color = 2;
@@ -93,8 +94,9 @@ void main()
 
             // calculate the leaf start position
             vec3 orth = cross(axis, leaf_axis);
-            vec3 startPos = posAlongBranch + orth * (r1 + (r2 - r1) * dist);
-            startPos = startPos + orth * 0.1; // offset; // TODO: add noise here
+            vec3 startPos = posAlongBranch /*+ orth * (r1 + (r2 - r1) * dist)*/;
+            float offset = 0.5 * noise1D(g0.x * g0.y * g0.z * i, g1.x * g1.y * g1.z * i);
+            startPos = startPos + orth * offset; // offset;
 
             // calculate the leaf normal
             vec3 leaf_norm = genNormal(startPos, leaf_axis, i);

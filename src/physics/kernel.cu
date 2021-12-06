@@ -402,8 +402,8 @@ __global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edge
         vbo[11 * index + 6] = toNode.position.z;
         vbo[11 * index + 7] = toNode.radius;
 
-        vbo[11 * index + 8] = (fromNode.leaf ? 1.0f : -1.f);
-        vbo[11 * index + 9] = (toNode.leaf ? 1.0f : -1.f);
+        vbo[11 * index + 8] = (fromNode.leaf && modules[edge.moduleInx].temperature < 300) ? 1.0f : -1.f;
+        vbo[11 * index + 9] = (toNode.leaf && modules[edge.moduleInx].temperature < 300) ? 1.0f : -1.f;
         vbo[11 * index + 10] = modules[edge.moduleInx].temperature;
     }
     else
