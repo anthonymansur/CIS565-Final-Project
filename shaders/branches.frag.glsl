@@ -26,7 +26,13 @@ void main()
         }
             
         else
-           color = vec4(.63, .58, .55, 1.0); 
+        {
+            if (frag_attrib.y >= 150)
+                color = 0.2 * vec4(.63, .58, .55, 1.0) + 0.8 * vec4(.81, .16, .01, 1.0);
+            else
+                color = vec4(.63, .58, .55, 1.0); 
+        }
+           
     }
 
     vec3 ambient = ambient(frag_height) * color.rgb; // ambient 
@@ -46,8 +52,10 @@ vec4 temp_color(float temp)
     else if (temp > 450)
         return vec4(1.f, 1.f, 0.f, 1.f);
     else
-        return ((450 - temp) / 450) * vec4(0.f, 0.f, 1.f, 1.f) + 
-        (1 - ((450 - temp) / 450)) * vec4(1.f, 0.f, 0.f, 1.f);
+    {
+        float heat = (1 - ((450 - temp) / 450));
+        return vec4(heat, 0, 1-heat, 1);
+    }
 }
 
 float ambient(float height)
