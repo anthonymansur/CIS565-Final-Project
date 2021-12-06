@@ -39,8 +39,6 @@ float* dev_deltaM;
 
 Terrain* m_terrain;
 
-float totalTime = 0.f;
-
 /******************
 * initSimulation *
 ******************/
@@ -105,8 +103,6 @@ void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
 
 void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength, float* d_out)
 {
-    totalTime += dt;
-
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
     // For each module in the forest
@@ -146,18 +142,26 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    //float* h_out = (float*)malloc(sizeof(float) * 28 * 2);
-    //cudaMemcpy(h_out, d_out, sizeof(float) * 28 * 2, cudaMemcpyDeviceToHost);
+    /*float* h_out = (float*)malloc(sizeof(float) * 28 * 2);
+    cudaMemcpy(h_out, d_out, sizeof(float) * 28 * 2, cudaMemcpyDeviceToHost);
+    int num = 0;
+    for (int i = 0; i < 28 * 2; i++) {
+        printf("d_out[%d] = %f\n", i, h_out[i]);
+    }
+    free(h_out);*/
+
+    //float* h_smoke = (float*)malloc(sizeof(float) * 28 * 2);
+    //cudaMemcpy(h_smoke, dev_smokedensity, sizeof(float) * 28 * 2, cudaMemcpyDeviceToHost);
     //int num = 0;
     //for (int i = 0; i < 28 * 2; i++) {
-    //    printf("d_out[%d] = %f\n", i, h_out[i]);
+    //    printf("d_smoke[%d] = %f\n", i, h_smoke[i]);
     //}
-    //free(h_out);
+    //free(h_smoke);
 
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
-    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance, totalTime);
+    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());
