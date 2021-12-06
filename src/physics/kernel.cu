@@ -380,7 +380,7 @@ void Simulation::endSimulation()
 *********************/
 
 // TODO: need to cull edges
-__global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edges)
+__global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edges, Module* modules)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
@@ -392,24 +392,25 @@ __global__ void kernUpdateVBOBranches(int N, float* vbo, Node* nodes, Edge* edge
         Node& fromNode = nodes[edge.fromNode];
         Node& toNode = nodes[edge.toNode];
 
-        vbo[10 * index + 0] = fromNode.position.x;
-        vbo[10 * index + 1] = fromNode.position.y;
-        vbo[10 * index + 2] = fromNode.position.z;
-        vbo[10 * index + 3] = fromNode.radius;
+        vbo[11 * index + 0] = fromNode.position.x;
+        vbo[11 * index + 1] = fromNode.position.y;
+        vbo[11 * index + 2] = fromNode.position.z;
+        vbo[11 * index + 3] = fromNode.radius;
 
-        vbo[10 * index + 4] = toNode.position.x;
-        vbo[10 * index + 5] = toNode.position.y;
-        vbo[10 * index + 6] = toNode.position.z;
-        vbo[10 * index + 7] = toNode.radius;
+        vbo[11 * index + 4] = toNode.position.x;
+        vbo[11 * index + 5] = toNode.position.y;
+        vbo[11 * index + 6] = toNode.position.z;
+        vbo[11 * index + 7] = toNode.radius;
 
-        vbo[10 * index + 8] = (fromNode.leaf ? 1.0f : -1.f);
-        vbo[10 * index + 9] = (toNode.leaf ? 1.0f : -1.f);
+        vbo[11 * index + 8] = (fromNode.leaf ? 1.0f : -1.f);
+        vbo[11 * index + 9] = (toNode.leaf ? 1.0f : -1.f);
+        vbo[11 * index + 10] = 449;//modules[edge.moduleInx].temperature;
     }
     else
     {
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 11; i++)
         {
-            vbo[10 * index + i] = 0.f;
+            vbo[11 * index + i] = 0.f;
         }
     }
 }
@@ -418,6 +419,6 @@ void Simulation::copyBranchesToVBO(float* vbodptr_branches)
 {
     // TODO: implement
     dim3 fullBlocksPerGrid((numOfEdges + blockSize - 1) / blockSize);
-    kernUpdateVBOBranches << <fullBlocksPerGrid, blockSize >>> (numOfEdges, vbodptr_branches, dev_nodes, dev_edges);
+    kernUpdateVBOBranches << <fullBlocksPerGrid, blockSize >>> (numOfEdges, vbodptr_branches, dev_nodes, dev_edges, dev_modules);
     cudaDeviceSynchronize();
 }

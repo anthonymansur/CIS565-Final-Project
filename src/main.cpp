@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
         camera.UpdateOrbit(0, -25, -15);
         camera.updateCamera(program, 2);
         Simulation::initSimulation(&terrain);
+        //Simulation::endSimulation();
         // TODO: generate terrain
         mainLoop(terrain.edges.size());
         return 0;
@@ -349,20 +350,21 @@ void initVAO(int NUM_OF_BRANCHES) {
     stbi_image_free(pixels);
 
     /** Branches */
-    std::unique_ptr<GLfloat[]> branches{ new GLfloat[10 * NUM_OF_BRANCHES] };
+    std::unique_ptr<GLfloat[]> branches{ new GLfloat[11 * NUM_OF_BRANCHES] };
 
     for (int i = 0; i < NUM_OF_BRANCHES; i++)
     {
-        branches[10 * i + 0] = 0.0f;
-        branches[10 * i + 1] = 0.0f;
-        branches[10 * i + 2] = 0.0f;
-        branches[10 * i + 3] = 0.0f;
-        branches[10 * i + 4] = 0.0f;
-        branches[10 * i + 5] = 0.0f;
-        branches[10 * i + 6] = 0.0f;
-        branches[10 * i + 7] = 0.0f;
-        branches[10 * i + 8] = 0.0f;
-        branches[10 * i + 9] = 0.0f;
+        branches[11 * i + 0] = 0.0f;
+        branches[11 * i + 1] = 0.0f;
+        branches[11 * i + 2] = 0.0f;
+        branches[11 * i + 3] = 0.0f;
+        branches[11 * i + 4] = 0.0f;
+        branches[11 * i + 5] = 0.0f;
+        branches[11 * i + 6] = 0.0f;
+        branches[11 * i + 7] = 0.0f;
+        branches[11 * i + 8] = 0.0f;
+        branches[11 * i + 9] = 0.0f;
+        branches[11 * i + 10] = 0.0f;
     }
 
 
@@ -372,16 +374,16 @@ void initVAO(int NUM_OF_BRANCHES) {
 
     glBindVertexArray(VAO_branches);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_branches);
-    glBufferData(GL_ARRAY_BUFFER,  NUM_OF_BRANCHES * (10 * sizeof(GLfloat)), branches.get(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,  NUM_OF_BRANCHES * (11 * sizeof(GLfloat)), branches.get(), GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)0);
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)(4 * sizeof(GLfloat)));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(4 * sizeof(GLfloat)));
 
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 10 * sizeof(GLfloat), (GLvoid*)(8 * sizeof(GLfloat)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(8 * sizeof(GLfloat)));
 
     glBindVertexArray(0);
 }

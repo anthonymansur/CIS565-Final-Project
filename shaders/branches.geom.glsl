@@ -12,9 +12,9 @@ uniform mat4 u_projMatrix;
 
 in vec4 geo_v0[];
 in vec4 geo_v1[];
-in vec2 geo_attrib[];
+in vec3 geo_attrib[];
 
-out float frag_attrib;
+out vec2 frag_attrib;
 out vec3 aNormal;
 out float y_coord;
 
@@ -72,18 +72,21 @@ void main()
         vec3 p1 = g0.xyz + r1 * normal;
         vec3 p2 = g1.xyz + r2 * normal;
 
-        frag_attrib = -1.0f;
+        frag_attrib.x = -1.0f;
 
         gl_Position = u_projMatrix * vec4(p1, 1.0);
         EmitVertex();
         gl_Position = u_projMatrix * vec4(p2, 1.0);
         EmitVertex();
+        //frag_attrib.y = geo_attrib[0].z;
     }
+    //frag_attrib.y = geo_attrib[0].z; 
     EndPrimitive();
+    frag_attrib.y = geo_attrib[0].z; 
 
    if (geo_attrib[0].x > -1.0f) {
         // draw leaf at node 1
-        frag_attrib = 1.0f;
+        frag_attrib.x = 1.0f;
 
         vec3 leaf1_p1 = g0.xyz + r1 * norm1;
         vec3 leaf1_p2 = g0.xyz + (r1 * 3.0) * axis;
@@ -153,7 +156,7 @@ void main()
 
     if (geo_attrib[0].y > -1.0f) {
         // draw leaf at node 1
-        frag_attrib = 1.0f;
+        frag_attrib.x = 1.0f;
 
         vec3 leaf1_p1 = g0.xyz + r2 * norm1;
         vec3 leaf1_p2 = g0.xyz + (r2 * 3.0) * axis;

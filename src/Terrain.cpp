@@ -174,6 +174,7 @@ bool Terrain::loadScene(std::string filename)
 					edge.fromNode = it->first;
 					edge.toNode = nodeInx;
 					edge.culled = false;
+					edge.moduleInx = modules.size();
 
 					Node& node = nodes[nodeInx];
 					edge.length = glm::distance(prevNode.position, node.position);

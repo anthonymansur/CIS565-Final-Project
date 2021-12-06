@@ -11,7 +11,7 @@
  */
 __device__ const float T0 = 150, T1 = 450;
 
-__device__ const float T_amb = 20.f; // TODO: move elsewhere?
+__device__ const float T_amb = 15.f; // TODO: move elsewhere?
 
 /**
  * @brief the saturation temperature of water

@@ -1,18 +1,29 @@
 #version 330
 
-in float frag_attrib;
+in vec2 frag_attrib;
 in float y_coord;
 in vec3 aNormal;
 
 out vec4 outColor;
 
+vec4 temp_color(float temp)
+{
+    if (temp < 0)
+        return vec4(0.f, 1.f, 0.f, 1.f);
+    else if (temp > 450)
+        return vec4(1.f, 1.f, 0.f, 1.f);
+    else
+        return ((450 - temp) / 450) * vec4(0.f, 0.f, 1.f, 1.f) + 
+        (1 - ((450 - temp) / 450)) * vec4(1.f, 0.f, 0.f, 1.f);
+}
+
 void main() 
 {
     vec4 color;
-    if (frag_attrib > 0.f)
+    if (frag_attrib.x > 0.f)
         color = vec4(.12, .31, .14, 1.f); // green
     else
-        color = vec4(.38, .25, .13, 1.f); // dark brown
+        color = temp_color(frag_attrib.y); // dark brown
 
     vec3 ambient = vec3(0.4f) * color.rgb; //ambient 
 
