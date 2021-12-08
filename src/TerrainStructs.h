@@ -12,8 +12,11 @@
 
 struct Node
 {
+    // Node-specific parameters
     float radius; // starting radius of branch
-    glm::vec3 position; // the location of the node in grid space
+    glm::vec3 position; // the location of the node in world
+    
+    // Pointers
     int previousEdge;
     int firstEdge; 
     int lastEdge;
@@ -21,28 +24,19 @@ struct Node
 
 struct Edge
 {
-    int fromNode;
-    int toNode;
-
+    // Edge-specific parameters
     float length;
     float radiiRatio;
     glm::vec3 direction;
+
+    // Pointers
+    int fromNode;
+    int toNode;
 };
 
 struct Module
 {
-    int previousNode; // terminal node of previous module
-
-    int startNode; // root node of module
-    int lastNode; // the last node in the module's graph
-    int startEdge; 
-    int lastEdge; // may be a connection node
-    int startModule;
-    int endModule;
-    // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
-
-
-    // module-level parameters
+    // Module-specific parameters
     float temperature;
     float mass, deltaM; 
     glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
@@ -50,6 +44,18 @@ struct Module
     float moduleConstant;
     float waterContent;
 
+    // Pointers
+    // -- modules
+    int startModule;
+    int endModule;
+    // -- nodes
+    int previousNode; // terminal node of previous module
+    int startNode; // root node of module
+    int lastNode; // the last node in the module's graph
+    // -- edges
+    int startEdge; 
+    int lastEdge; // may be a connection node
+    // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
 };
 
 struct ModuleEdge
