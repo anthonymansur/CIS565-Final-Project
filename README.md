@@ -1,7 +1,7 @@
 # CIS565-Final-Project
 Final Group Project for CIS 565: GPU Programming
 
-by [Anthony Mansur](), [Stephen Lee](), and [Lindsay Smith]()
+by [Anthony Mansur](), [Stephen Lee](), and [Lindsay Smith](https://github.com/lsmith24)
 
 ## Project Overview
 Adapted from: [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
