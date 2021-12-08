@@ -8,7 +8,13 @@ Adapted from: [Fire in Paradise: Mesoscale Simulation of Wildfires](http://compu
 
 ![Forest Render GIF](images/basic-wildfire-demo-part1.gif)
 
-As climate change continues to globally exacerbate droughts in dry places, medium to large scale wildfires have become common place during the hottest months of the year. Consequently learning how to predict the spread of wildfires to figure out the best ways to combat them has become increasingly important. Physically-based models of wildfires have traditionally been inadequate in accurately simulating real-world behavior due to high computation costs leading to necessary compromises in fidelity. Recently, new [physically-based models](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf) have been developed that show promising potential to have a physically-accurate, interactable wildire simulation by abstracting trees in a forest into modules that simplify computations while maintaining the the geometric and spatial information on the trees the comprise, the most vital factor in maintaining an accurate simulation of fire spread. Our goal for this project was to build off of this work done, creating a wildfire simulation of our own using CUDA and C++ leverage parallelization on the GPU and OpenGL to render our scenes.
+## Introduction
+
+As climate change continues to globally exacerbate droughts in dry places, medium to large scale wildfires have become common place during the hottest months of the year. Consequently learning how to predict the spread of wildfires to figure out the best ways to combat them has become increasingly important. 
+
+Physically-based models of wildfires have traditionally been inadequate in accurately simulating real-world behavior due to high computation costs leading to necessary compromises in fidelity. Recently, new [physically-based models](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf) have been developed that show promising potential to have a physically-accurate, interactable wildire simulation. This is done by abstracting the trees in a forest into modules that simplify computations while maintaining the geometric and spatial information necessary in maintaining an accurate simulation of fire spread. 
+
+Our goal for this project was to build off of [this work](http://computationalsciences.org/publications/haedrich-2021-wildfires.html) done, creating a wildfire simulation of our own using C++/CUDA to leverage parallelization on the GPU and OpenGL to render our scenes.
 
 ## Module-Based Approach
 
