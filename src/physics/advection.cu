@@ -382,63 +382,9 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
 
     __syncthreads();
     d_smoke[k] = ds;
-# if __CUDA_ARCH__>=200
-    /*if (d_smoke[k] != 0.f) {
-        printf("d_smoke[%d] = %f\n", k, d_smoke[k]);
-    }*/
-
-
-#endif 
+    //d_smoke[k] += 0.1f;
 }
 
-//void kernelLauncher(
-//    int3 gridCount,
-//    float3 gridSize,
-//    float blockSize,
-//    float* d_temp,
-//    float* d_oldtemp,
-//    float3* d_vel,
-//    float3* d_oldvel,
-//    float* d_pressure,
-//    float3* d_ccvel,
-//    float3* d_vorticity,
-//    float* d_smokedensity,
-//    float* d_oldsmokedensity,
-//    float* d_smokeRadiance,
-//    float* d_deltaM,
-//    float3 externalForce,
-//    bool sourcesEnabled,
-//    int activeBuffer, dim3 Ld, BC bc, dim3 M_in, unsigned int slice) {
-//    const dim3 gridDim(blocksNeeded(Ld.x, M_in.x), blocksNeeded(Ld.y, M_in.y),
-//        blocksNeeded(Ld.z, M_in.z));
-//
-//    // CFD
-//    float* d_lap;
-//    float3* d_alpha_m;
-//    HANDLE_ERROR(cudaMalloc(&d_lap, gridCount.x * gridCount.y * gridCount.z * sizeof(float)));
-//    HANDLE_ERROR(cudaMalloc(&d_alpha_m, gridCount.x * gridCount.y * gridCount.z * sizeof(float3)));
-//
-//    computeVorticity << <gridDim, M_in >> > (gridCount, blockSize, d_vorticity, d_oldvel, d_ccvel);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_oldtemp, d_vel, d_oldvel, d_alpha_m,
-//        d_oldsmokedensity, d_vorticity, externalForce);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    // Pressure Solve
-//    forceIncompressibility(gridCount, blockSize, d_vel, d_pressure);
-//
-//    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_temp, d_oldtemp, d_vel, d_alpha_m, d_lap, d_deltaM);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_oldtemp, d_vel, d_alpha_m, d_smokedensity, d_oldsmokedensity, d_deltaM);
-//
-//    HANDLE_ERROR(cudaPeekAtLastError());
-//    HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    HANDLE_ERROR(cudaFree(d_alpha_m));
-//    HANDLE_ERROR(cudaFree(d_lap));
-//}
-//
 void initGridBuffers(
     int3 gridCount,
     float* d_temp,

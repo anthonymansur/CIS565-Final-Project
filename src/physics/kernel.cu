@@ -25,16 +25,14 @@ Node* dev_nodes;
 Edge* dev_edges;
 Module* dev_modules;
 ModuleEdge* dev_moduleEdges;
+GridCell* dev_gridCells;
 
 // indices of tree buffers (needed for culling)
 int* dev_moduleIndices;
 int* dev_temp_moduleIndices;
 
-// Grid Dimensions
-// TODO: make these dynamic to the scene being loaded
-int3 gridCount = { 80, 12, 20 };        
-float3 gridSize = { 200.f, 30.f, 50.f };
-float sideLength = 2.5f; // "blockSize"
+// grid cell module adjacency
+GridModuleAdj* dev_gridModuleAdjs;
 
 // Grid Kernel Launch params
 const dim3 M_in(M_IX, M_IY, M_IZ);
@@ -49,130 +47,16 @@ float3* dev_ccvel;
 float3* dev_vorticity;
 float* dev_smokedensity;
 float* dev_oldsmokedensity;
+float* dev_smokeRadiance;
 float* dev_deltaM;
 
 Terrain* m_terrain;
-
-// Smoke rendering variables
-float* smokeQuadsPositions;
-unsigned int* smokeIndexes;
-float* smokeQuadsColors;
-GLuint smokeQuadVBO;
-GLuint smokeQuadIndexBO;
-float3 externalForce;
-GLuint smokeColorBufferObj = 0;
-
-int flatten(const int i_x, const int i_y, const int i_z) {
-    return i_x + i_y * gridCount.x + i_z * gridCount.y * gridCount.z;
-}
-
-void Simulation::initSmokeQuads() {
-    int nflat = gridCount.x * gridCount.y * gridCount.z;
-    smokeQuadsPositions = new float[3 * 4 * 3 * nflat];
-    smokeQuadsColors = new float[4 * 4 * nflat];
-    smokeIndexes = new unsigned int[4 * nflat];
-    for (unsigned int x = 0; x < gridCount.x; x++) {
-        for (unsigned int y = 0; y < gridCount.y; y++) {
-            for (unsigned int z = 0; z < gridCount.z; z++) {
-                std::array<float, 12> vertexes = {
-                    x * sideLength, y * sideLength, z * sideLength,
-                    x * sideLength, y * sideLength, (z + 1) * sideLength,
-                    x * sideLength, (y + 1) * sideLength, (z + 1) * sideLength,
-                    x * sideLength, (y + 1) * sideLength, z * sideLength
-                };
-                std::copy(vertexes.begin(), vertexes.end(),
-                    smokeQuadsPositions + 12 * flatten(x, y, z));
-            }
-        }
-    }
-    for (unsigned int x = 0; x < gridCount.x; x++) {
-        for (unsigned int y = 0; y < gridCount.x; y++) {
-            for (unsigned int z = 0; z < gridCount.z; z++) {
-                std::array<float, 12> vertexes = {
-                    x * sideLength, y * sideLength, z * sideLength,
-                    (x + 1) * sideLength, y * sideLength, z * sideLength,
-                    (x + 1) * sideLength, y * sideLength, (z + 1) * sideLength,
-                    x * sideLength, y * sideLength, (z + 1) * sideLength
-                };
-                std::copy(vertexes.begin(), vertexes.end(),
-                    smokeQuadsPositions + 1 * 4 * 3 * nflat + 12 * flatten(x, y, z));
-            }
-        }
-    }
-    for (unsigned int x = 0; x < gridCount.x; x++) {
-        for (unsigned int y = 0; y < gridCount.y; y++) {
-            for (unsigned int z = 0; z < gridCount.z; z++) {
-                std::array<float, 12> vertexes = {
-                    x * sideLength, y * sideLength, z * sideLength,
-                    (x + 1) * sideLength, y * sideLength, z * sideLength,
-                    (x + 1) * sideLength, (y + 1) * sideLength, z * sideLength,
-                    x * sideLength, (y + 1) * sideLength, z * sideLength
-                };
-                std::copy(vertexes.begin(), vertexes.end(),
-                    smokeQuadsPositions + 2 * 4 * 3 * nflat + 12 * flatten(x, y, z));
-            }
-        }
-    }
-
-
-    glGenBuffers(1, &smokeQuadVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, smokeQuadVBO);
-    glBufferData(GL_ARRAY_BUFFER, 3 * nflat * 4 * 3 * sizeof(float), smokeQuadsPositions, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glGenBuffers(1, &smokeQuadIndexBO);
-    for (int i = 0; i < 4 * nflat; i++) smokeIndexes[i] = i;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, smokeQuadIndexBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * nflat * sizeof(unsigned int), smokeIndexes, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-}
-
-void Simulation::renderSmokeQuads(unsigned int cameraAxis) {
-    int nflat = gridCount.x * gridCount.y * gridCount.z;
-    glDisable(GL_CULL_FACE);
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glDisable(GL_DEPTH_TEST);
-    glBindBuffer(GL_ARRAY_BUFFER, smokeQuadVBO);
-    glVertexPointer(3, GL_FLOAT, 0, BUFFER_OFFSET(cameraAxis * 4 * 3 * nflat * sizeof(float)));
-    glBindBuffer(GL_ARRAY_BUFFER, smokeColorBufferObj);
-    glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, smokeQuadIndexBO);
-    glDrawElements(GL_QUADS, 4 * nflat, GL_UNSIGNED_INT, (void*)0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-}
-
-void Simulation::renderExternalForce(float3 externalForce) {
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex3f(0, 0, 0);
-    glVertex3fv((GLfloat*)&externalForce);
-    glEnd();
-}
-
-void Simulation::render(unsigned int cameraAxis) {
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glScalef(2, 2, 2);
-    glTranslatef(-gridSize.x / 2, -gridSize.y / 2, -gridSize.z / 2);
-    //if (gridEnabled) renderGrid();
-    //if (raysEnabled) renderLightRays();
-    renderSmokeQuads(cameraAxis);
-    glPopMatrix();
-
-    //renderExternalForce();
-}
 
 /******************
 * initSimulation *
 ******************/
 
-void Simulation::initSimulation(Terrain* terrain)
+void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
 {
     m_terrain = terrain;
     numOfModules = terrain->modules.size();
@@ -198,7 +82,6 @@ void Simulation::initSimulation(Terrain* terrain)
     HANDLE_ERROR(cudaMalloc((void**)&dev_temp_moduleIndices, numOfModules * sizeof(Module)));
 
     // Allocate grid buffers
-    
     HANDLE_ERROR(cudaMalloc((void**)&dev_temp, numOfGrids * sizeof(float)));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_oldtemp, numOfGrids * sizeof(float)));
@@ -219,8 +102,13 @@ void Simulation::initSimulation(Terrain* terrain)
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_oldsmokedensity, numOfGrids * sizeof(float)));
 
+    HANDLE_ERROR(cudaMalloc((void**)&dev_smokeRadiance, numOfGrids * sizeof(float)));
+
     HANDLE_ERROR(cudaMalloc((void**)&dev_deltaM, numOfGrids * sizeof(float)));
     HANDLE_ERROR(cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float)));
+
+    HANDLE_ERROR(cudaMalloc((void**)&dev_gridModuleAdjs, terrain->gridModuleAdjs.size() * sizeof(GridModuleAdj)));
+    HANDLE_ERROR(cudaMalloc((void**)&dev_gridCells, terrain->gridCells.size() * sizeof(GridCell)));
 
     initGridBuffers(gridCount, dev_temp, dev_oldtemp, dev_vel, dev_oldvel, dev_smokedensity, dev_oldsmokedensity, dev_pressure, M_in);
 
@@ -230,20 +118,12 @@ void Simulation::initSimulation(Terrain* terrain)
 
     kernInitIndices << <modules_fullBlocksPerGrid, blockSize >> > (numOfModules, dev_moduleIndices);
 
-    glGenBuffers(1, &smokeColorBufferObj);
-    glBindBuffer(GL_ARRAY_BUFFER, smokeColorBufferObj);
-
-    glBufferData(GL_ARRAY_BUFFER, numOfGrids * 4 * 4 * sizeof(GLubyte), 0, GL_STREAM_DRAW);
-    cudaGLRegisterBufferObject(smokeColorBufferObj);
-    initSmokeQuads();
-
     cudaDeviceSynchronize();
 }
 
 /******************
 * stepSimulation *
 ******************/
-
 struct is_negative
 {
     __host__ __device__
@@ -262,7 +142,7 @@ struct is_nonnegative
     }
 };
 
-void Simulation::stepSimulation(float dt)
+void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float sideLength, float* d_out)
 {
     dim3 fullBlocksPerGrid((numOfModules + blockSize - 1) / blockSize);
 
@@ -278,15 +158,13 @@ void Simulation::stepSimulation(float dt)
     // TODO: implement
     const dim3 gridDim(blocksNeeded(gridCount.x, M_IX), blocksNeeded(gridCount.y, M_IY), blocksNeeded(gridCount.z, M_IZ));
     
-    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, numOfModules, sideLength, dev_moduleIndices, dev_modules, dev_deltaM);
+    kernComputeChangeInMass<<<gridDim, M_in>>>(gridCount, dev_modules, dev_gridCells, dev_gridModuleAdjs, dev_deltaM);
+    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     // Update air temperature
     // update drag forces (wind)
     // update smoke density (qs), water vapor (qv), condensed water (qc),
     // and rain (qc)
-    uchar4* d_out = 0;
-    cudaGLMapBufferObject((void**)&d_out, smokeColorBufferObj);
-
     float* dev_lap;
     float3* dev_alpha_m;
     float3 externalForce = { 0.f, 0.f, 0.f };
@@ -306,26 +184,33 @@ void Simulation::stepSimulation(float dt)
     tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    //float* h_temp = (float*)malloc(sizeof(float) * 20 * 20 * 20);
-    //cudaMemcpy(h_temp, dev_temp, sizeof(float) * 20 * 20 * 20, cudaMemcpyDeviceToHost);
+    /*float* h_out = (float*)malloc(sizeof(float) * 28 * 2);
+    cudaMemcpy(h_out, d_out, sizeof(float) * 28 * 2, cudaMemcpyDeviceToHost);
+    int num = 0;
+    for (int i = 0; i < 28 * 2; i++) {
+        printf("d_out[%d] = %f\n", i, h_out[i]);
+    }
+    free(h_out);*/
+
+    //float* h_smoke = (float*)malloc(sizeof(float) * 28 * 24);
+    //cudaMemcpy(h_smoke, dev_smokedensity, sizeof(float) * 28 * 24, cudaMemcpyDeviceToHost);
     //int num = 0;
-    //for (int i = 0; i < 20 * 20 * 20; i++) {
-    //    //if (h_temp[i] != 20.0f && h_temp[i] != 0.f) printf("index: %d, value: %f\n", i, h_temp[i]);
-    //    if (h_temp[i] != 20.0f && h_temp[i] != 0.f) num++;
+    //for (int i = 0; i < 28 * 24; i++) {
+    //    if (h_smoke[i] > 0.f)
+    //    printf("d_smoke[%d] = %f\n", i, h_smoke[i]);
     //}
-    //printf("%d\n", num);
-    //free(h_temp);
+    //free(h_smoke);
 
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
+
+    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());
 
     HANDLE_ERROR(cudaFree(dev_alpha_m));
     HANDLE_ERROR(cudaFree(dev_lap));
-
-    cudaGLUnmapBufferObject(smokeColorBufferObj);
 
     // Ping-pong buffers
     std::swap(dev_temp, dev_oldtemp);
@@ -368,6 +253,7 @@ void Simulation::endSimulation()
     HANDLE_ERROR(cudaMemcpy(m_terrain->modules.data(), dev_modules, m_terrain->modules.size() * sizeof(Module), cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaMemcpy(m_terrain->moduleEdges.data(), dev_moduleEdges, m_terrain->moduleEdges.size() * sizeof(ModuleEdge), cudaMemcpyDeviceToHost));
 
+    cudaFree(dev_gridModuleAdjs);
     cudaFree(dev_modules);
     cudaFree(dev_edges);
     cudaFree(dev_nodes);

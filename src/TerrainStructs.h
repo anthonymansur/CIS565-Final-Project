@@ -41,6 +41,7 @@ struct Module
     int lastEdge; // may be a connection node
     int startModule; // module edge pointer
     int endModule; // module edge pointer
+    int gridCell;
     // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
 
     // module-level parameters
@@ -56,6 +57,17 @@ struct Module
 };
 
 struct ModuleEdge
+{
+    int moduleInx;
+};
+
+struct GridCell
+{
+    int startModule;
+    int endModule;
+};
+
+struct GridModuleAdj
 {
     int moduleInx;
 };

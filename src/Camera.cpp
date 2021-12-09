@@ -1,7 +1,7 @@
 #include "Camera.h"
 
 Camera::Camera(float aspectRatio) {
-	r = 10.0f;
+	r = 20.0f;
 	theta = 0.0f;
 	phi = 0.0f;
 	view = glm::lookAt(glm::vec3(0.0f, 1.0f, 10.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -69,7 +69,7 @@ void Camera::mousePositionCallback(GLFWwindow* window, double xpos, double ypos,
 
 		previousX = xpos;
 		previousY = ypos;
-		updateCamera(program, 2);
+		updateCamera(program, 3);
 	}
 	else if (rightMousePressed) {
 		double deltaZ = static_cast<float>((previousY - ypos) * 0.05);
@@ -77,6 +77,6 @@ void Camera::mousePositionCallback(GLFWwindow* window, double xpos, double ypos,
 		UpdateOrbit(0.0f, 0.0f, deltaZ);
 
 		previousY = ypos;
-		updateCamera(program, 2);
+		updateCamera(program, 3);
 	}
 }

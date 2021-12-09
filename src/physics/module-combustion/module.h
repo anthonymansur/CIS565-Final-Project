@@ -232,10 +232,14 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
 __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp);
 
 /** TODO: add description */
-__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, int* moduleIndices, Module* modules, float* gridOfMass);
+__global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCell* gridCells, GridModuleAdj* gridModuleAdjs, float* gridOfMass);
 
 /** TODO: add description */
 __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize);
 
 /** TODO: add description */
 __global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge* edges);
+
+/** TODO: add description */
+__device__ float getGridCell(Module& module, int3 gridCount, float blockSize);
+

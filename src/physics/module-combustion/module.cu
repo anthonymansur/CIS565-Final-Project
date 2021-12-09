@@ -454,7 +454,7 @@ __device__ int m_idxClip(int idx, int idxMax) {
 __device__ int m_flatten(int col, int row, int z, int width, int height, int depth) {
     return m_idxClip(col, width) + m_idxClip(row, height) * width + m_idxClip(z, depth) * width * height;
 }
-__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, int* moduleIndices, Module* modules, float* gridOfMass)
+__global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCell* gridCells, GridModuleAdj* gridModuleAdjs, float* gridOfMass)
 {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -462,23 +462,19 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
     const int k = m_flatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
 
-    float3 pos = make_float3((k_x + 0.5f) * blockSize, (k_y + 0.5f) * blockSize, (k_z + 0.5f) * blockSize);
-    // converting grid-space to terrain-space
-    glm::vec3 glmPos{ 0.f };
-    glmPos.x = pos.x - floor(gridCount.x * blockSize / 2);
-    glmPos.y = pos.y - floor(gridCount.y * blockSize / 2);
-    glmPos.z = pos.z - floor(gridCount.z * blockSize / 2);
+    GridCell& gridCell = gridCells[k];
+    if (gridCell.startModule < 0 || gridCell.endModule < 0)
+        return;
 
-    float deltaM = 0;
-    for (int i = 0; i < numOfModules; i++)
+    float deltaM = 0.f;
+    for (int i = gridModuleAdjs[gridCell.startModule].moduleInx; i <= gridModuleAdjs[gridCell.endModule].moduleInx; i++)
     {
-        if (checkModuleIntersection(modules[moduleIndices[i]], glmPos))
-            deltaM += getDeltaMassOfModuleAtPoint(modules[i], glmPos, blockSize);
+        deltaM += modules[i].deltaM;
     }
     gridOfMass[k] = deltaM;
 }
 
-__device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize)
+__device__ float getGridCell(Module& module, int3 gridCount, float blockSize)
 {
     // Convert center of mass to grid-space coordinates // e.g. (-10,10) to (0, 20)
     glm::vec3 com = module.centerOfMass;
@@ -487,9 +483,16 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
     com.z += floor(gridCount.z * blockSize / 2);
 
     // get the grid at this location
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 3; i++)
         com[i] = blockSize * round(com[i] / blockSize);
     int inx = m_flatten(com.x, com.y, com.z, gridCount.x, gridCount.y, gridCount.z);
+
+    return inx;
+}
+
+__device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize)
+{
+    int inx = getGridCell(module, gridCount, blockSize);
 
     return temp[inx];
 }

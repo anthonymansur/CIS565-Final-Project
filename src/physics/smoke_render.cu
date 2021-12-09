@@ -105,7 +105,6 @@ __global__ void smokeLightKernel(int3 gridCount, float3 gridSize, float blockSiz
         }
     __syncthreads();
     }
-    
 }
 __global__ void resetSmokeRadiance(int3 gridCount, float * voxelRadiance){
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
@@ -116,27 +115,53 @@ __global__ void resetSmokeRadiance(int3 gridCount, float * voxelRadiance){
     
     voxelRadiance[k] = 0.f;
 }
-__global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, uchar4* dev_out, const float* d_smoke, float* d_smokeRadiance) {
+
+__global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, float* dev_out, const float* d_smoke, float* d_smokeRadiance) {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
     const int k_z = threadIdx.z + blockDim.z * blockIdx.z;
+
     if ((k_x >= gridCount.x ) || (k_y >= gridCount.y ) || (k_z >= gridCount.z)) return;
     const int k = sflatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
     if(isnan(d_smokeRadiance[k]) || isinf(d_smokeRadiance[k])) d_smokeRadiance[k] = 0;
-    const unsigned char transparency = clip((int) (expf(-(fabsf(SMOKE_EXTINCTION_COEFF/d_smoke[k]))* blockSize)*255.f));
-    const unsigned char intensity = clip((int) (d_smokeRadiance[k]*255.f));
+    const float transparency = expf(-(fabsf(SMOKE_EXTINCTION_COEFF/d_smoke[k]))* blockSize);
+    const float intensity = d_smokeRadiance[k];
     
     //const unsigned char intensity = clip((int) (d_smoke[k]*255.f));
+    unsigned int numPerQuad = 4 * (3 + 4); // 3 floats verts + 4 floats col
+    unsigned int offsetQuad = k * numPerQuad;
+    unsigned int offsetInner = 3; // vec3 = 3 uchar4
+    unsigned int offsetXZ = numPerQuad * gridCount.x * gridCount.y * gridCount.z;
+    unsigned int offsetXY = 2 * numPerQuad * gridCount.x * gridCount.y * gridCount.z;
+    // plane offset
+    
     for(unsigned int i = 0; i < 4; i++){
-        dev_out[4*k+i].x = intensity;
-        dev_out[4*k+i].z = intensity;
-        dev_out[4*k+i].y = intensity;
-        dev_out[4*k+i].w = transparency; // 255 => solid display
+        // YZ
+        dev_out[offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetQuad + offsetInner + ((4 + 3) * i) + 1] = intensity;
+        dev_out[offsetQuad + offsetInner + ((4 + 3) * i) + 2] = intensity;
+        dev_out[offsetQuad + offsetInner + ((4 + 3) * i) + 3] = transparency;
+
+        // XZ
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i) + 1] = intensity;
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i) + 2] = intensity;
+        dev_out[offsetXZ + offsetQuad + offsetInner + ((4 + 3) * i) + 3] = transparency;
+
+        // XY
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i)] = intensity;
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i) + 1] = intensity;
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i) + 2] = intensity;
+        dev_out[offsetXY + offsetQuad + offsetInner + ((4 + 3) * i) + 3] = transparency;
     }
+
 }
 
-void smokeRender(int3 gridCount, float3 gridSize, float blockSize, dim3 gridSizeK, dim3 M_i, uchar4* d_out, float *d_smokedensity, float *d_smokeRadiance){
+void smokeRender(int3 gridCount, float3 gridSize, float blockSize, dim3 gridSizeK, dim3 M_i, float* d_out, float *d_smokedensity, float *d_smokeRadiance){
     // Rendering computations
+    float3 SMOKE_LIGHT_DIR = { 1,0,0 };
+    float3 SMOKE_LIGHT_POS = { -1,0,0 };
+    int SMOKE_RAY_SQRT_COUNT = 60;
     const dim3 rayBlockSize(8,8);
     const dim3 rayGridSize(blocksNeeded(SMOKE_RAY_SQRT_COUNT, rayBlockSize.x), 
                            blocksNeeded(SMOKE_RAY_SQRT_COUNT, rayBlockSize.y));

@@ -74,6 +74,7 @@ set(headers
     src/physics/advection.h
     src/physics/pressure.h
     src/physics/kernel.h
+    src/physics/vec3.h
     src/physics/smoke_render.h
     src/physics/module-combustion/module.h
     )

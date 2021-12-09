@@ -11,7 +11,7 @@ public:
     Terrain();
     ~Terrain();
 
-    bool loadScene(std::string filename);
+    bool loadScene(std::string filename, int x, int y, int z, float sideLength);
     bool loadTestScene();
 
     float precipitation;
@@ -26,4 +26,6 @@ public:
     std::vector<Edge> edges;
     std::vector<Module> modules;
     std::vector<ModuleEdge> moduleEdges;
+    std::vector<GridCell> gridCells;
+    std::vector<GridModuleAdj> gridModuleAdjs;
 };

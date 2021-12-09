@@ -75,8 +75,28 @@ glm::vec4 coneCenterOfMass(glm::vec3 p0, glm::vec3 p1, float r0, float r1)
 	return glm::vec4(pos.x, pos.y, pos.z, coneMass(500, r0, r1, l));
 }
 
+int t_flatten(const int i_x, const int i_y, const int i_z, int gridCount_x, int gridCount_y, int gridCount_z) {
+    return i_x + i_y * gridCount_x + i_z * gridCount_y * gridCount_z;
+}
+
+float getGridCell(Module& module, glm::ivec3 gridCount, float blockSize)
+{
+    // Convert center of mass to grid-space coordinates // e.g. (-10,10) to (0, 20)
+    glm::vec3 com = module.centerOfMass;
+    com.x += floor(gridCount.x / 2);
+    com.y += floor(gridCount.y * blockSize / 2);
+    com.z += floor(gridCount.z * blockSize / 2);
+
+    // get the grid at this location
+    for (int i = 0; i < 3; i++)
+        com[i] = blockSize * round(com[i] / blockSize);
+    int inx = t_flatten(com.x, com.y, com.z, gridCount.x, gridCount.y, gridCount.z);
+
+    return inx;
+}
+
 // TODO: the last node may not be added, so the last tree/module may not be added. 
-bool Terrain::loadScene(std::string filename)
+bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float sideLength)
 {
 	std::ifstream scene;
 	scene.open(filename);
@@ -382,8 +402,37 @@ bool Terrain::loadScene(std::string filename)
 		}
 
 		module.centerOfMass = centerOfMass / sumOfWeights;
+		module.gridCell = getGridCell(module, glm::ivec3(gx, gy, gz), sideLength);
 	}
 
+	std::cout << "Updating grid module adjacency" << std::endl;
+	
+
+	// for every grid cell
+	for (int i = 0; i < gx * gy * gz; i++)
+	{
+		GridCell gridCell;
+		gridCell.startModule = gridModuleAdjs.size();
+		// for every module
+		for (int j = 0; j < modules.size(); j++)
+		{
+			// check to see if module is in this grid cell
+			Module& module = modules[j];
+			if (module.gridCell == i)
+			{
+				GridModuleAdj gma;
+				gma.moduleInx = j;
+				gridModuleAdjs.push_back(gma);
+			}
+		}
+		gridCell.endModule = gridModuleAdjs.size() - 1;
+		if (gridCell.startModule > gridCell.endModule)
+		{
+			// no modules in this grid cell
+			gridCell.startModule = gridCell.endModule = -1;
+		}
+		gridCells.push_back(gridCell);
+	}
 
 	end = std::chrono::steady_clock::now();
 	std::cout << "This process took " << FIXED_FLOAT(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.f)<< " seconds." << std::endl;
