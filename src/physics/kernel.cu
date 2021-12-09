@@ -204,7 +204,7 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
-    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
+    //smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());

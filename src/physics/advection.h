@@ -36,6 +36,8 @@ __global__ void resetKernelCentered(int3 gridCount, float* d_temp, float* d_oldt
 
 __global__ void resetKernelVelocity(int3 gridCount, float3* d_vel, float3* d_oldvel);
 
+__global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_temp);
+
 /**
 * @brief Computes contribution to velocity (wind speed) update due to turbulent forces
 * 

@@ -403,10 +403,10 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float windSpeed = 0; // TODO: implement
     float deltaM = glm::clamp(rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
 
-    if (moduleIndex < 12500 && module.temperature > 150)
+    /*if (moduleIndex < 12500 && module.temperature > 150)
         deltaM = -0.0005f;
     else
-        deltaM = 0.f;
+        deltaM = 0.f;*/
 
     module.mass += deltaM;
     module.deltaM = deltaM;
@@ -435,10 +435,10 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float V_M = module.mass / rho;
     float deltaT = glm::clamp(rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M), 0.f, MAX_DELTA_T);
 
-    if (moduleIndex < 12500 && module.temperature < 449)
+    /*if (moduleIndex < 12500 && module.temperature < 449)
         deltaT = 0.5f;
     else
-        deltaT = 0.f;
+        deltaT = 0.f;*/
 
     module.temperature += deltaT;
 

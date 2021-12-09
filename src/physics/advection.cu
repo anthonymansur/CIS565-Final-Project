@@ -174,12 +174,16 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
     if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
 
     const int k = flatten(gridCount, k_x, k_y, k_z);
-    if (d_abs(k_z - gridCount.x / 2) * d_abs(k_z - gridCount.x / 2) +
-        d_abs(k_y - gridCount.y / 2) * d_abs(k_y - gridCount.y / 2) +
-        d_abs(k_x - gridCount.z / 2) * d_abs(k_x - gridCount.z / 2) < gridCount.x * gridCount.x / (7 * 25)) {
+    if (k < 10) {
+        d_temp[k] = T_AMBIANT + 150.f;
         d_smokedensity[k] = 1.5;
-        d_temp[k] = T_AMBIANT + 100.f;
     }
+    // if (d_abs(k_z - gridCount.x / 2) * d_abs(k_z - gridCount.x / 2) +
+    //     d_abs(k_y - gridCount.y / 2) * d_abs(k_y - gridCount.y / 2) +
+    //     d_abs(k_x - gridCount.z / 2) * d_abs(k_x - gridCount.z / 2) < gridCount.x * gridCount.x / (7 * 25)) {
+    //     d_smokedensity[k] = 1.5;
+    //     d_temp[k] = T_AMBIANT + 100.f;
+    // }
 }
 
 __global__ void velocityKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, 
@@ -409,5 +413,8 @@ void initGridBuffers(
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     resetPressure << <gridSizeC, M_in >> > (gridCount, d_pressure);
+    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
+
+    sourceskernel<<<gridSizeC, M_in>>> (gridCount, d_oldsmokedensity, d_oldtemp);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 }
