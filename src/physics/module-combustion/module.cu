@@ -231,13 +231,13 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
 }
 
 // TODO: diffusion of adjacent modules not yet correctlyimplemented
-__device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M)
+__device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
-    float diffusion = alpha_M * (T_adj - T); // TODO: implement diffusion. see eq. (30)
+    float diffusion = alpha_M * T_diff; // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy
-    float changeOfEnergy = 0;//(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M);
+    float changeOfEnergy = (c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M);
 
     return diffusion + temp_diff - changeOfEnergy; 
 }
@@ -288,7 +288,7 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
         float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
         lap += (adj.temperature - module.temperature) / (dist * dist);
     }
-    return 0.01 * lap; // TODO: tune coefficient
+    return lap;
 }
 
 /**********
@@ -427,18 +427,13 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     // TODO: sync threads here?
 
     /** 3. Update temperature */
-    float T = getEnvironmentTempAtModule(module, gridTemp, gridCount, blockSize);
-    float T_adj = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
+    float T = gridTemp[module.gridCell];
+    float T_diff = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
     float A_M = area; 
     float V_M = module.mass / rho;
-    float deltaT = glm::clamp(rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M), 0.f, MAX_DELTA_T);
-
-    /*if (moduleIndex < 12500 && module.temperature < 449)
-        deltaT = 0.5f;
-    else
-        deltaT = 0.f;*/
+    float deltaT = glm::clamp(rateOfTemperatureChange(T, T_M, T_diff, W, A_M, V_M), 0.f, MAX_DELTA_T);
 
     module.temperature += deltaT;
 

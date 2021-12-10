@@ -63,6 +63,7 @@ float sideLength = 2.5f; // "blockSize"
 
 // gui variables
 static bool renderLeaves = true;
+static bool renderModuleTemp = false;
 
 // functions
 bool init(int argc, char** argv);
@@ -587,20 +588,13 @@ void errorCallback(int error, const char *description) {
     GLuint location;
     if (key == GLFW_KEY_1 && action == GLFW_PRESS)
     {
-        // render tree normally
+        // render module temperature
+        renderModuleTemp = !renderModuleTemp;
         if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
-            glUniform1i(location, false);
+            glUniform1i(location, renderModuleTemp);
         }
     }
     if (key == GLFW_KEY_2 && action == GLFW_PRESS)
-    {
-        // render temperature
-
-        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
-            glUniform1i(location, true);
-        }
-    }
-    if (key == GLFW_KEY_3 && action == GLFW_PRESS)
     {
         // render temperature
         renderLeaves = !renderLeaves;

@@ -160,6 +160,7 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
  * 
  * @return the new radius
  */
+// TODO: update params
 __device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M);
 
 /**
