@@ -79,12 +79,15 @@ __device__ float alpha = 0.02; // TODO: first paper had different numbers?
  */
 __device__ float alpha_M = 0.75;
 
+/** TODO: add description */
+__device__ float lap_constant = 500.f; // TODO: TUNE
+
 /**
  * @brief Heat transfer coeff. for dry wood 
  * @note range: [0.03, 0.1], units: 1 s^-1
  */
-#define B_DRY 0.06
-__device__ const float b_dry = B_DRY; 
+#define B_DRY 0.1
+__device__ const float b_dry = B_DRY; // TODO: TUNE
 
 /**
  * @brief Heat transfer coeff. for wet wood 
@@ -100,8 +103,8 @@ __device__ const float c_WM = 0.5362;
 
 /** TODO: add description */
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
-__device__ const float MAX_DELTA_M = 0.0001;
-__device__ const float MAX_DELTA_T = 0.001;
+__device__ const float MAX_DELTA_M = 0.001;// 0.0001;  // TODO: TUNE 
+__device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
 
 /*******************
 * Device Functions *
@@ -237,7 +240,10 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float
     float diffusion = alpha_M * T_diff; // TODO: implement diffusion. see eq. (30)
     float temp_diff = b * (T - T_M);
     // TODO: add back change of energy
-    float changeOfEnergy = (c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M);
+
+    float changeOfEnergy = 0;
+    if (T_M > 150) // start of combustion
+        changeOfEnergy = (c_bar * A_M * powf(T_M - T_sat, 3)) / (V_M * rho * c_M);
 
     return diffusion + temp_diff - changeOfEnergy; 
 }
@@ -288,7 +294,7 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
         float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
         lap += (adj.temperature - module.temperature) / (dist * dist);
     }
-    return lap;
+    return lap * lap_constant;
 }
 
 /**********
@@ -427,13 +433,13 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     // TODO: sync threads here?
 
     /** 3. Update temperature */
-    float T = gridTemp[module.gridCell];
+    float T_env = gridTemp[module.gridCell];
     float T_diff = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
-    float A_M = area; 
+    float A_M = area; // lateral surface area 
     float V_M = module.mass / rho;
-    float deltaT = glm::clamp(rateOfTemperatureChange(T, T_M, T_diff, W, A_M, V_M), 0.f, MAX_DELTA_T);
+    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), 0.f, MAX_DELTA_T);
 
     module.temperature += deltaT;
 

@@ -174,8 +174,8 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
     if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
 
     const int k = flatten(gridCount, k_x, k_y, k_z);
-    if (k < 10) {
-        d_temp[k] = T_AMBIANT + 150.f;
+    if (k < 1000) {
+        d_temp[k] = T_AMBIANT + 300.f;
         d_smokedensity[k] = 1.5;
     }
     // if (d_abs(k_z - gridCount.x / 2) * d_abs(k_z - gridCount.x / 2) +
