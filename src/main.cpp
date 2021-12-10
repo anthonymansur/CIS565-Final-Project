@@ -63,6 +63,7 @@ float sideLength = 2.5f; // "blockSize"
 
 // gui variables
 static bool renderLeaves = true;
+static bool renderModuleTemp = false;
 
 // functions
 bool init(int argc, char** argv);
@@ -249,6 +250,8 @@ void mainLoop(int NUM_OF_BRANCHES)
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
 
+        glBindVertexArray(0);
+        glUseProgram(0);
 
         glfwSwapBuffers(window);
     }
@@ -587,21 +590,18 @@ void errorCallback(int error, const char *description) {
     GLuint location;
     if (key == GLFW_KEY_1 && action == GLFW_PRESS)
     {
-        // render tree normally
+        glUseProgram(program[PROG_branches]);
+        glBindVertexArray(VAO_branches);
+        // render module temperature
+        renderModuleTemp = !renderModuleTemp;
         if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
-            glUniform1i(location, false);
+            glUniform1i(location, renderModuleTemp);
         }
     }
     if (key == GLFW_KEY_2 && action == GLFW_PRESS)
     {
-        // render temperature
-
-        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
-            glUniform1i(location, true);
-        }
-    }
-    if (key == GLFW_KEY_3 && action == GLFW_PRESS)
-    {
+        glUseProgram(program[PROG_branches]);
+        glBindVertexArray(VAO_branches);
         // render temperature
         renderLeaves = !renderLeaves;
         if ((location = glGetUniformLocation(program[PROG_branches], "u_renderLeaves")) != -1) {
