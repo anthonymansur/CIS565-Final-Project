@@ -184,13 +184,19 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    /*float* h_out = (float*)malloc(sizeof(float) * 28 * 2);
-    cudaMemcpy(h_out, d_out, sizeof(float) * 28 * 2, cudaMemcpyDeviceToHost);
+    float* h_temp = (float*)malloc(sizeof(float) * 24 * 8 * 24);
+    cudaMemcpy(h_temp, dev_temp, sizeof(float) * 24 * 8 * 24, cudaMemcpyDeviceToHost);
     int num = 0;
-    for (int i = 0; i < 28 * 2; i++) {
-        printf("d_out[%d] = %f\n", i, h_out[i]);
+    for (int i = 0; i < 24 * 8 * 24; i++) {
+        if (h_temp[i] > 21.f) {
+            printf("d_temp[%d] = %f\n", i, h_temp[i]);
+        }
+        if (h_temp[i] > T_AMBIANT) {
+            num++;
+        }
     }
-    free(h_out);*/
+    printf("%d\n", num);
+    free(h_temp);
 
     //float* h_smoke = (float*)malloc(sizeof(float) * 28 * 24);
     //cudaMemcpy(h_smoke, dev_smokedensity, sizeof(float) * 28 * 24, cudaMemcpyDeviceToHost);
@@ -204,7 +210,7 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
-    //smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
+    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());
