@@ -81,15 +81,17 @@ int t_flatten(const int i_x, const int i_y, const int i_z, int gridCount_x, int 
 
 int getGridCell(Module& module, glm::ivec3 gridCount, float blockSize)
 {
-    // Convert center of mass to grid-space coordinates // e.g. (-10,10) to (0, 20)
+    // Convert center of mass to grid-space coordinates // -30 to 30 on both (x, z) y between 0 to 20
     glm::vec3 com = module.centerOfMass;
-    com.x += floor(gridCount.x / 2);
-    com.y += floor(gridCount.y * blockSize / 2);
-    com.z += floor(gridCount.z * blockSize / 2);
 
-    // get the grid at this location
+	// Shift world space coords to be stricly positive
+    com.x += floor(gridCount.x * blockSize / 2.f);
+    //com.y += floor(gridCount.y / 2);
+    com.z += floor(gridCount.z * blockSize / 2.f);
+
+    // Squish shifted space down into integer grid space
     for (int i = 0; i < 3; i++)
-        com[i] = blockSize * round(com[i] / blockSize);
+        com[i] = round(com[i] / blockSize);
     int inx = t_flatten(com.x, com.y, com.z, gridCount.x, gridCount.y, gridCount.z);
 
     return inx;
@@ -428,14 +430,17 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 
 		module.centerOfMass = centerOfMass / sumOfWeights;
 		module.gridCell = getGridCell(module, glm::ivec3(gx, gy, gz), sideLength);
-		std::cout << "module[" << i << "] = " << module.gridCell << std::endl;
+		if (module.gridCell >= 4608 || module.gridCell < 0) {
+			std::cout << "module[" << i << "] = " << module.gridCell << std::endl; // should be 0 < num < 4608
+		}
 	}
 
 	std::cout << "Updating grid module adjacency" << std::endl;
 	
 
 	// for every grid cell
-	for (int i = 0; i < gx * gy * gz; i++)
+	int sumCell = 0;
+	for (int i = 0; i < 4608; i++)
 	{
 		GridCell gridCell;
 		gridCell.startModule = gridModuleAdjs.size();
@@ -446,6 +451,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 			Module& module = modules[j];
 			if (module.gridCell == i)
 			{
+				sumCell++;
 				GridModuleAdj gma;
 				gma.moduleInx = j;
 				gridModuleAdjs.push_back(gma);
@@ -459,6 +465,10 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 		}
 		gridCells.push_back(gridCell);
 	}
+
+	std::cout << gridModuleAdjs.size() << std::endl;
+	std::cout << modules.size() << std::endl;
+	std::cout << sumCell << std::endl;
 
 	end = std::chrono::steady_clock::now();
 	std::cout << "This process took " << FIXED_FLOAT(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.f)<< " seconds." << std::endl;

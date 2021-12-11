@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
     {
         if ((node.firstEdge == -1 || node.lastEdge == -1) && node.previousEdge == -1)
         {
-            std::cout << "Check node: " << i << std::endl;
+            //std::cout << "Check node: " << i << std::endl;
             nsum++;
         }
         i++;
@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
         if (module.parentModule == -1 && (module.startModule < 0 || module.endModule < 0))
         {
             if (msum < 5)
-                std::cout << "Check module: " << i << std::endl;
+                //std::cout << "Check module: " << i << std::endl;
             msum++;
         }
         i++;
