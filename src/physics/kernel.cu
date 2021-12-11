@@ -244,7 +244,7 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     // For each module in the forest
     // cull modules (and their children) that have zero mass
     
-    kernCullModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_moduleIndices, dev_modules, dev_edges);
+    kernCullModules << <fullBlocksPerGrid, blockSize >> > (numOfModules, dev_moduleIndices, dev_modules, dev_moduleEdges, dev_nodes, dev_edges);
 
     // stream compaction
     thrust::device_ptr<int> thrust_indices = 

@@ -532,7 +532,7 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
 }
 
 // TODO: cull children of modules
-__global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge* edges)
+__global__ void kernCullModules(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
@@ -542,14 +542,29 @@ __global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge
     // check if module needs to be culled
     if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
+        module.culled = true;
+
+        // cull children
+        for (int i = module.startModule; i < module.endModule; i++)
+        {
+            modules[moduleEdges[i].moduleInx].culled = true;
+
+        }
+    }
+
+    __syncthreads();
+
+    if (module.culled)
+    {   
         moduleIndices[index] = -1; // cull the module
 
-        // for every edge in the module, cull it so it isn't rendered
+       // for every edge in the module, cull it so it isn't rendered
         for (int i = module.startEdge; i <= module.lastEdge && i >= 0; i++)
         {
-
             Edge& edge = edges[i];
             edge.culled = true;
+            nodes[edge.fromNode].radius = 0.f;
+            nodes[edge.toNode].radius = 0.f;
         }
     }
 }
