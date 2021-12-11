@@ -41,6 +41,7 @@ struct Module
     int lastEdge; // may be a connection node
     int startModule; // module edge pointer
     int endModule; // module edge pointer
+    int parentModule; // pointer to parent module
     int gridCell;
     // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
 

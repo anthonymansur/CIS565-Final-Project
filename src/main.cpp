@@ -88,6 +88,39 @@ int main(int argc, char* argv[])
     std::cout << "Number of modules: " << terrain.modules.size() << std::endl;
     std::cout << "Number of branches: " << terrain.edges.size() << std::endl;
 
+    int esum = 0;
+    for (Edge edge : terrain.edges)
+    {
+        if (edge.moduleInx == -1)
+            esum++;
+    }
+    int nsum = 0;
+    int i = 0;
+    for (Node node : terrain.nodes)
+    {
+        if ((node.firstEdge == -1 || node.lastEdge == -1) && node.previousEdge == -1)
+        {
+            std::cout << "Check node: " << i << std::endl;
+            nsum++;
+        }
+        i++;
+    }
+    int msum = 0;
+    i = 0;
+    for (Module module : terrain.modules)
+    {
+        if (module.parentModule == -1 && (module.startModule < 0 || module.endModule < 0))
+        {
+            if (msum < 5)
+                std::cout << "Check module: " << i << std::endl;
+            msum++;
+        }
+        i++;
+    }
+    std::cout << "Number of edges with no modules: " << esum << std::endl;
+    std::cout << "Number of nodes with no connections: " << nsum << std::endl;
+    std::cout << "Number of modules w/ no connections: " << msum << std::endl;
+
     //return 1;
 
     if (init(argc, argv))
