@@ -320,6 +320,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 		Node node;
 		node.position = glm::vec3(posx, posy, posz);
 		node.radius = radius;
+		node.startRadius = radius;
 		node.firstEdge = -1;
 		node.lastEdge = -1;
 		node.previousEdge = -1;

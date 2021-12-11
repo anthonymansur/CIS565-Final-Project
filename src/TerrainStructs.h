@@ -13,6 +13,7 @@
 struct Node
 {
     float radius; // starting radius of branch
+    float startRadius; // radius before burning
     glm::vec3 position; // the location of the node in grid space
     int previousEdge;
     int firstEdge; 

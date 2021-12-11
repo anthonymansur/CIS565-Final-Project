@@ -121,6 +121,8 @@ __device__ float getArea(float r0, float r1, float l)
 
 __device__ float getVolume(float r0, float r1, float l)
 {
+    if (r0 < FLT_EPSILON || r1 < FLT_EPSILON)
+        return 0.f;
     return (float)(M_PI / 3) * l * (r0 * r0 + r0 * r1 + r1 * r1);
 }
 
@@ -159,9 +161,8 @@ __device__ float getFrontArea(float A0, float H0, float H)
     return A0 * H / H0;
 }
 
-__device__ float rateOfMassChange(float mass, float H0, float A0, float temp, float frontArea, float windSpeed)
+__device__ float rateOfMassChange(float mass, float H0, float H, float A0, float temp, float frontArea, float windSpeed)
 {
-    float H = heightOfPyrolyzingFront(H0, A0, mass);
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
     float k = computeReactionRate(temp, windSpeed);
@@ -227,7 +228,7 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 
 __device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, float deltaMass)
 {
-    if (module.mass + deltaMass < 0.f) return 0.f;
+    if (module.mass + deltaMass < FLT_EPSILON) return 0.f;
     return sqrt(3 / (M_PI * rho)) * radiiModuleConstant(nodes, edges, module) * sqrt(module.mass + deltaMass);
 }
 
@@ -406,7 +407,7 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
 
     /** 1. update the mass */
     // calculate the current state of the module
-    float mass = 0;
+    float mass = 0.f;
     float area = 0;
     float temp = module.temperature;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
@@ -424,14 +425,21 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
         area += getArea(r0, r1, l);
     }
 
+# if __CUDA_ARCH__>=200
+    if (mass != mass)
+    {
+        printf("mass: %f", mass);
+    }
+#endif
+
     // compute the change in mass
-    float H0 = rootNode.radius;
+    float H0 = rootNode.startRadius;
     float A0 = module.startArea;
     float H = heightOfPyrolyzingFront(H0, A0, mass);
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
-    //float deltaM = glm::clamp(rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
-    float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
+    //float deltaM = glm::clamp(rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
+    float deltaM = rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed);
     /*if (moduleIndex < 12500 && module.temperature > 150)
         deltaM = -0.0005f;
     else

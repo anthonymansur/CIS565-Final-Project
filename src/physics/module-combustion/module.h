@@ -111,7 +111,8 @@ __device__ float getFrontArea(float A0, float H0, float H);
  * 
  * @return the rate
  */
-__device__ float rateOfMassChange(float mass, float H0, float A0, float temp, float frontArea, float windSpeed);
+// TODO: update params
+__device__ float rateOfMassChange(float mass, float H0, float H, float A0, float temp, float frontArea, float windSpeed);
 
 /**
  * @brief Derives a constant that will be used during the radii update algorithm
