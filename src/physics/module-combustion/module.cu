@@ -103,7 +103,7 @@ __device__ const float c_WM = 0.5362;
 
 /** TODO: add description */
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
-__device__ const float MAX_DELTA_M = 0.001;// 0.0001;  // TODO: TUNE 
+__device__ const float MAX_DELTA_M = 0.1;// 0.0001;  // TODO: TUNE 
 __device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
 
 /*******************
@@ -347,14 +347,14 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.boundingMin = minPos;
     module.boundingMax = maxPos;
 
-    module.deltaM = 0;
+    module.deltaM = 0.f;
     module.temperature = T_amb;
 
     // primitive combustion
     /*if (index < 4000)
         module.temperature = 300;*/
 
-    module.waterContent = 0;
+    module.waterContent = 0.f;
 }
 
 __global__ void kernInitIndices(int N, int* indices)
@@ -371,6 +371,8 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     if (index >= N) return;
 
     int moduleIndex = moduleIndices[index];
+
+    if (moduleIndex == -1) return;
 
     /** for each module in the forest */
     Module& module = modules[moduleIndex];
@@ -416,6 +418,13 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
 
     module.mass += deltaM;
     module.deltaM = deltaM;
+
+//# if __CUDA_ARCH__>=200
+//    if (moduleIndex == 22304) {
+//        printf("kern1 d_deltaM[%d] = %f\n", 22304, modules[22304].deltaM);
+//    }
+//
+//#endif 
 
     /** Perform radii update */
     // update the root's radius
@@ -470,8 +479,34 @@ __global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCel
     float deltaM = 0.f;
     for (int i = gridModuleAdjs[gridCell.startModule].moduleInx; i <= gridModuleAdjs[gridCell.endModule].moduleInx; i++)
     {
+        if (modules[i].deltaM < -MAX_DELTA_M || modules[i].deltaM > 0.f) {
+            //# if __CUDA_ARCH__>=200
+            //if (modules[i].deltaM != 0.f) {
+            //    printf("i: %d, %f\n", i, modules[i].deltaM);
+            //}
+            //#endif
+            continue;
+        }
         deltaM += modules[i].deltaM;
     }
+
+    //# if __CUDA_ARCH__>=200
+    //printf("start: %d, end: %d\n", gridModuleAdjs[gridCell.startModule].moduleInx, gridModuleAdjs[gridCell.endModule].moduleInx);
+    //    
+
+    //#endif
+//# if __CUDA_ARCH__>=200
+//    if (k == 0) {
+//        for (int i = 0; i < 25000; i++) {
+//            if (i == 22304) {
+//                printf("d_deltaM[%d] = %f\n", i, modules[i].deltaM);
+//            }
+//        }
+//    }
+//
+//#endif
+ 
+
     gridOfMass[k] = deltaM;
 }
 
@@ -509,6 +544,12 @@ __global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge
     // check if module needs to be culled
     if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
+//# if __CUDA_ARCH__>=200
+//        if (moduleIndices[index] == 5287) {
+//            printf("culled\n");
+//        }
+//
+//#endif
         moduleIndices[index] = -1; // cull the module
 
         // for every edge in the module, cull it so it isn't rendered

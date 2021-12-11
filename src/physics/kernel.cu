@@ -105,10 +105,12 @@ void Simulation::initSimulation(Terrain* terrain, int3 gridCount)
     HANDLE_ERROR(cudaMalloc((void**)&dev_smokeRadiance, numOfGrids * sizeof(float)));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_deltaM, numOfGrids * sizeof(float)));
-    HANDLE_ERROR(cudaMemset(dev_deltaM, 0, numOfGrids * sizeof(float)));
 
     HANDLE_ERROR(cudaMalloc((void**)&dev_gridModuleAdjs, terrain->gridModuleAdjs.size() * sizeof(GridModuleAdj)));
+    cudaMemcpy(dev_gridModuleAdjs, terrain->gridModuleAdjs.data(), terrain->gridModuleAdjs.size() * sizeof(GridModuleAdj), cudaMemcpyHostToDevice);
+
     HANDLE_ERROR(cudaMalloc((void**)&dev_gridCells, terrain->gridCells.size() * sizeof(GridCell)));
+    cudaMemcpy(dev_gridCells, terrain->gridCells.data(), terrain->gridCells.size() * sizeof(GridCell), cudaMemcpyHostToDevice);
 
     initGridBuffers(gridCount, dev_temp, dev_oldtemp, dev_vel, dev_oldvel, dev_smokedensity, dev_oldsmokedensity, dev_pressure, M_in);
 
@@ -169,6 +171,22 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     float3* dev_alpha_m;
     float3 externalForce = { 0.f, 0.f, 0.f };
 
+    //float* h_deltaM = (float*)malloc(sizeof(float) * 24 * 8 * 24);
+    //cudaMemcpy(h_deltaM, dev_deltaM, sizeof(float) * 24 * 8 * 24, cudaMemcpyDeviceToHost);
+    //int num = 0;
+    //for (int i = 0; i < 24 * 8 * 24; i++) {
+    //    //if (h_temp[i] > 50.f) {
+    //    //    printf("d_temp[%d] = %f\n", i, h_temp[i]);
+    //    //}
+    //    if (h_deltaM[i] != 0.f) {
+    //        printf("d_deltaM[%d] = %f\n", i, h_deltaM[i]);
+    //        num++;
+    //    }
+    //}
+    //printf("%d\n", num);
+    //free(h_deltaM);
+
+
     HANDLE_ERROR(cudaMalloc(&dev_lap, gridCount.x * gridCount.y * gridCount.z * sizeof(float)));
     HANDLE_ERROR(cudaMalloc(&dev_alpha_m, gridCount.x * gridCount.y * gridCount.z * sizeof(float3)));
 
@@ -184,19 +202,19 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_temp, dev_oldtemp, dev_vel, dev_alpha_m, dev_lap, dev_deltaM);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
-    float* h_temp = (float*)malloc(sizeof(float) * 24 * 8 * 24);
-    cudaMemcpy(h_temp, dev_temp, sizeof(float) * 24 * 8 * 24, cudaMemcpyDeviceToHost);
-    int num = 0;
-    for (int i = 0; i < 24 * 8 * 24; i++) {
-        if (h_temp[i] > 21.f) {
-            printf("d_temp[%d] = %f\n", i, h_temp[i]);
-        }
-        if (h_temp[i] > T_AMBIANT) {
-            num++;
-        }
-    }
-    printf("%d\n", num);
-    free(h_temp);
+    //float* h_temp = (float*)malloc(sizeof(float) * 24 * 8 * 24);
+    //cudaMemcpy(h_temp, dev_temp, sizeof(float) * 24 * 8 * 24, cudaMemcpyDeviceToHost);
+    //int num = 0;
+    //for (int i = 0; i < 24 * 8 * 24; i++) {
+    //    //if (h_temp[i] > 50.f) {
+    //    //    printf("d_temp[%d] = %f\n", i, h_temp[i]);
+    //    //}
+    //    if (h_temp[i] > 30.f) {
+    //        num++;
+    //    }
+    //}
+    ////printf("%d\n", num);
+    //free(h_temp);
 
     //float* h_smoke = (float*)malloc(sizeof(float) * 28 * 24);
     //cudaMemcpy(h_smoke, dev_smokedensity, sizeof(float) * 28 * 24, cudaMemcpyDeviceToHost);
@@ -210,7 +228,7 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
-    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance);
+    //smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance, dev_oldtemp);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());

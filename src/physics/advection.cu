@@ -174,7 +174,9 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
     if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
 
     const int k = flatten(gridCount, k_x, k_y, k_z);
-    if (k < 100) {
+    if (k_x < 16 && k_x > 10 &&
+        k_y < 6 && k_y > 4 &&
+        k_z < 16 && k_z > 10) {
         d_temp[k] = T_AMBIANT + 300.f;
         d_smokedensity[k] = 1.5;
     }
@@ -326,29 +328,32 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     if (estimated.y > gridSize.y - blockSize) estimated.y = gridSize.y - blockSize;
     if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
 
-    float dtR = TEMPERATURE_GAMMA * powf(scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT) - T_AMBIANT, 4);
+    // radiative cooling
+    float dtC = TEMPERATURE_GAMMA * powf(scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT) - T_AMBIANT, 4);
+    dtC = glm::clamp(dtC, -5.0f, 0.f);
+    //float dtR = TEMPERATURE_GAMMA * powf(d_oldtemp[k] - T_AMBIANT, 4);
     lap[k] = laplacian(gridCount, blockSize, d_oldtemp, T_AMBIANT, k_x, k_y, k_z);
 
     __syncthreads();
 
-    dtR += TEMPERATURE_ALPHA * scalarLinearInt(gridCount, blockSize, lap, estimated, 0);
+    // diffusion component
+    float dtD = TEMPERATURE_ALPHA * scalarLinearInt(gridCount, blockSize, lap, estimated, 0);
 
     // mass contribution
     float dtm = TAU * d_deltaM[k];
-    if (dtm > 0) dtm *= -1.0f; // temporary fix for positive change in mass
 
-    d_temp[k] = -dtm + dt + dtR * 2 * DELTA_T;
+    d_temp[k] = d_oldtemp[k] + (-dtm + dtD + dtC) * 2 * DELTA_T;
     # if __CUDA_ARCH__>=200
-    //if (d_temp[k] != 20.f) {
-    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtR = %f\n", k, d_temp[k], dtm, dt, dtR);
+    //if (k > 100 && d_temp[k] > 25.f) {
+    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
     //}
     //if (lap[k] != 0.0f) {
     //    printf("lap[%d] = %f\n", k, lap[k]);
     //}
     //if (d_deltaM[k] != 0.f) {
-    //    printf("%f\n", d_deltaM[k]);
+    //    printf("advection %f\n", d_deltaM[k]);
     //}
-    
+    //
        
     #endif 
 }
