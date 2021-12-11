@@ -216,19 +216,10 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     ////printf("%d\n", num);
     //free(h_temp);
 
-    //float* h_smoke = (float*)malloc(sizeof(float) * 28 * 24);
-    //cudaMemcpy(h_smoke, dev_smokedensity, sizeof(float) * 28 * 24, cudaMemcpyDeviceToHost);
-    //int num = 0;
-    //for (int i = 0; i < 28 * 24; i++) {
-    //    if (h_smoke[i] > 0.f)
-    //    printf("d_smoke[%d] = %f\n", i, h_smoke[i]);
-    //}
-    //free(h_smoke);
-
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
-    //smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance, dev_oldtemp);
+    smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance, dev_oldtemp);
 
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());

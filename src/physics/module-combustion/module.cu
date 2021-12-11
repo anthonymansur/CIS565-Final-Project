@@ -165,6 +165,25 @@ __device__ float rateOfMassChange(float mass, float H0, float A0, float temp, fl
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
     float k = computeReactionRate(temp, windSpeed);
+//# if __CUDA_ARCH__>=200
+//    if (H != H) {
+//        printf("H0: %f, A0: %f, mass: %f", H0, A0, mass);
+//        printf("H\n");
+//    }
+//    else if (H_c != H_c) {
+//        printf("H_c\n");
+//    }
+//    else if (c != c) {
+//        printf("c\n");
+//    }
+//    else if (k != k) {
+//        printf("k\n");
+//    }
+//    else if (frontArea != frontArea){
+//        printf("frontArea\n");
+//        printf("H: %f, H_c: %f, c: %f, k: %f, frontArea: %f\n", H, H_c, c, k, frontArea);
+//    }
+//#endif
 
     // TODO: verify this is correct, as it's throwing nan
     return -1 * k * c * frontArea;
@@ -208,12 +227,14 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 
 __device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, float deltaMass)
 {
+    if (module.mass + deltaMass < 0.f) return 0.f;
     return sqrt(3 / (M_PI * rho)) * radiiModuleConstant(nodes, edges, module) * sqrt(module.mass + deltaMass);
 }
 
 // TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius)
 {
+    if (rootRadius < FLT_EPSILON) return 0.f;
     int currNodeInx = nodeInx;
     Edge* edge; // will be updated
     float prod = 1;
@@ -389,11 +410,11 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float area = 0;
     float temp = module.temperature;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
-    {   
+    {
         // for every branch in the module
         Edge& edge = edges[i];
         Node& fromNode = nodes[edge.fromNode];
-        
+
         float r0 = fromNode.radius;
         float r1 = edge.radiiRatio * r0;
         float l = edge.length;
@@ -409,8 +430,8 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float H = heightOfPyrolyzingFront(H0, A0, mass);
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
-    float deltaM = glm::clamp(rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
-
+    //float deltaM = glm::clamp(rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
+    float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
     /*if (moduleIndex < 12500 && module.temperature > 150)
         deltaM = -0.0005f;
     else
@@ -418,13 +439,6 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
 
     module.mass += deltaM;
     module.deltaM = deltaM;
-
-//# if __CUDA_ARCH__>=200
-//    if (moduleIndex == 22304) {
-//        printf("kern1 d_deltaM[%d] = %f\n", 22304, modules[22304].deltaM);
-//    }
-//
-//#endif 
 
     /** Perform radii update */
     // update the root's radius
