@@ -95,6 +95,12 @@ int getGridCell(Module& module, glm::ivec3 gridCount, float blockSize)
     return inx;
 }
 
+/*
+Tree IDs can have gaps: we actually have 269 trees
+some modules only have one terminal node
+
+*/
+
 // TODO: the last node may not be added, so the last tree/module may not be added. 
 bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float sideLength)
 {
@@ -143,7 +149,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 	bool stop = false;
 	while (!stop)
 	{
-		stop = !std::getline(scene, line);
+		stop = !std::getline(scene, line);// || numOfTrees == 1;
 		// get the values of node
 		tokenize(line, ' ', tokens);
 
@@ -219,51 +225,68 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 			module.previousNode = -1;
 			module.startModule = -1;
 			module.endModule = -1;
+			module.parentModule = -1;
 
 			if (module.startNode == module.lastNode)
 				module.startEdge = module.lastEdge = -1.f;
 				
-
-			// update module's previous node
-			Node& rootNode = nodes[moduleStartNode];
-			// // if not root module of tree
-			for (int i = treeStartModule; i < modules.size(); i++)
-			{
-				// go through every module in the tree to see where this module
-				Module& module = modules[i];
-				bool found = false;
-				for (int j = module.startNode; j <= module.lastNode; j++)
-				{
-					// go through every need in this module to see if we identify the connection node
-					Node& node = nodes[j];
-					if (glm::distance(rootNode.position, node.position) < FLT_EPSILON)
-					{
-						// connection node has been found
-						found = true;
-						module.previousNode = j;
-
-						if (moduleMap.find(i) == moduleMap.end())
-						{
-							std::vector<int> list;
-							list.push_back(modules.size());
-							moduleMap.insert(std::pair<int, std::vector<int>>(i, list));
-						}
-						else
-							moduleMap.at(i).push_back(modules.size());
-						break;
-					}
-				}
-				if (found) break;
-			}
+			/** mapping of connection nodes was removed from here*/
 
 			modules.push_back(module);
 
-			moduleStartNode = nodes.size();
+			moduleStartNode = nodes.size(); // the new start node of the next module
 
 			if (updateTree)
 			{
 				/** new tree */
 				numOfTrees++;
+
+				// create the mapping of connection nodes for each module in the tree
+				for (int childModuleInx = treeStartModule + 1; // skip root module
+					childModuleInx < modules.size(); 
+					childModuleInx++)
+				{
+					Module& childModule = modules[childModuleInx];
+					Node& rootNode = nodes[childModule.startNode];
+
+					// go through every module in the tree to see which module contains the connection
+					for (int parentModuleInx = treeStartModule; 
+						parentModuleInx < modules.size(); 
+						parentModuleInx++)
+					{
+						if (parentModuleInx == childModuleInx)
+							continue; // only look at other modules.
+
+						Module& potentialParentModule = modules[parentModuleInx];
+						bool found = false;
+						for (int potentialConnectionNodeInx = potentialParentModule.startNode; 
+							potentialConnectionNodeInx <= potentialParentModule.lastNode; 
+							potentialConnectionNodeInx++)
+						{
+							// go through every node in this module to see if we identify the connection node
+							Node& potentialConnectionNode = nodes[potentialConnectionNodeInx];
+							if (glm::distance(rootNode.position, potentialConnectionNode.position) < FLT_EPSILON)
+							{
+								// connection node has been found
+								found = true;
+								childModule.previousNode = potentialConnectionNodeInx;
+								childModule.parentModule = parentModuleInx;
+
+								if (moduleMap.find(parentModuleInx) == moduleMap.end())
+								{
+									std::vector<int> list;
+									list.push_back(childModuleInx);
+									moduleMap.insert(std::pair<int, std::vector<int>>(parentModuleInx, list));
+								}
+								else
+									moduleMap.at(parentModuleInx).push_back(childModuleInx);
+								break;
+							}
+						}
+						if (found) break;
+					}
+				}
+
 				// update the adjacency list of each module in the tree
 				int startEdge = edges.size();
 				for (std::map<int, std::vector<int>>::iterator it = moduleMap.begin(); it != moduleMap.end(); ++it)
@@ -282,7 +305,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 
 				}
 				moduleMap.clear();
-				treeStartModule = modules.size() - 1;
+				treeStartModule = modules.size();
 
 				//std::cout << "Working on tree: " << treeId << std::endl;
 			}
@@ -306,6 +329,8 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 		{
 			// if not root node of module
 			int prevNodeInx = parent;
+
+			// add node to parent's adjacency list in the node map
 			if (nodeMap.find(prevNodeInx) == nodeMap.end())
 			{
 				std::vector<int> list;

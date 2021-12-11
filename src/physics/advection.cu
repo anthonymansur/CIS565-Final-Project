@@ -175,7 +175,7 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
 
     const int k = flatten(gridCount, k_x, k_y, k_z);
     if (k_x < 16 && k_x > 10 &&
-        k_y < 6 && k_y > 4 &&
+        k_y < 3 && k_y > 0 &&
         k_z < 16 && k_z > 10) {
         d_temp[k] = T_AMBIANT + 150.f;
         d_smokedensity[k] = 1.5;

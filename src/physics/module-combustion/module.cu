@@ -103,7 +103,7 @@ __device__ const float c_WM = 0.5362;
 
 /** TODO: add description */
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
-__device__ const float MAX_DELTA_M = 0.1;// 0.0001;  // TODO: TUNE 
+__device__ const float MAX_DELTA_M = 0.001;// 0.0001;  // TODO: TUNE 
 __device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
 
 /*******************
