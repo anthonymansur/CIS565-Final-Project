@@ -495,19 +495,17 @@ __global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCel
     //    
 
     //#endif
-//# if __CUDA_ARCH__>=200
-//    if (k == 0) {
-//        for (int i = 0; i < 25000; i++) {
-//            if (i == 22304) {
-//                printf("d_deltaM[%d] = %f\n", i, modules[i].deltaM);
-//            }
-//        }
-//    }
-//
-//#endif
- 
-
     gridOfMass[k] = deltaM;
+# if __CUDA_ARCH__>=200
+    //if (gridOfMass[k] < -300.f) {
+    //    printf("start: %d, end: %d\n", gridModuleAdjs[gridCell.startModule].moduleInx, gridModuleAdjs[gridCell.endModule].moduleInx);
+    //}
+    if (gridModuleAdjs[gridCell.endModule].moduleInx - gridModuleAdjs[gridCell.startModule].moduleInx > 100.f) {
+        printf("gridCell: %d, start: %d, end: %d\n", k, gridModuleAdjs[gridCell.startModule].moduleInx, gridModuleAdjs[gridCell.endModule].moduleInx);
+    }
+     //printf("d_deltaM[%d] = %f\n", k, gridOfMass[k]);
+
+#endif
 }
 
 __device__ float getGridCell(Module& module, int3 gridCount, float blockSize)

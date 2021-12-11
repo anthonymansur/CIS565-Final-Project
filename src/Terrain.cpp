@@ -79,7 +79,7 @@ int t_flatten(const int i_x, const int i_y, const int i_z, int gridCount_x, int 
     return i_x + i_y * gridCount_x + i_z * gridCount_y * gridCount_z;
 }
 
-float getGridCell(Module& module, glm::ivec3 gridCount, float blockSize)
+int getGridCell(Module& module, glm::ivec3 gridCount, float blockSize)
 {
     // Convert center of mass to grid-space coordinates // e.g. (-10,10) to (0, 20)
     glm::vec3 com = module.centerOfMass;
@@ -403,6 +403,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 
 		module.centerOfMass = centerOfMass / sumOfWeights;
 		module.gridCell = getGridCell(module, glm::ivec3(gx, gy, gz), sideLength);
+		std::cout << "module[" << i << "] = " << module.gridCell << std::endl;
 	}
 
 	std::cout << "Updating grid module adjacency" << std::endl;

@@ -64,6 +64,7 @@ float sideLength = 2.5f; // "blockSize"
 // gui variables
 static bool renderLeaves = true;
 static bool renderModuleTemp = false;
+static bool renderSmoke = true;
 
 // functions
 bool init(int argc, char** argv);
@@ -344,10 +345,11 @@ void initShaders(GLuint* program) {
     if ((location = glGetUniformLocation(program[PROG_fluid], "u_cameraPos")) != -1) {
         glUniform3fv(location, 1, &camera.position[0]);
     }
-
-    //glm::mat4 model = glm::rotate(90.f, glm::vec3(1.f, 0.f, 0.f));
     if ((location = glGetUniformLocation(program[PROG_fluid], "u_model")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &model[0][0]);
+    }
+    if ((location = glGetUniformLocation(program[PROG_branches], "u_renderSmoke")) != -1) {
+        glUniform1i(location, renderSmoke);
     }
 }
 
@@ -606,6 +608,16 @@ void errorCallback(int error, const char *description) {
         renderLeaves = !renderLeaves;
         if ((location = glGetUniformLocation(program[PROG_branches], "u_renderLeaves")) != -1) {
             glUniform1i(location, renderLeaves);
+        }
+    }
+    if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+    {
+        std::cout << "entered" << std::endl;
+        glUseProgram(program[PROG_fluid]);
+        glBindVertexArray(VAO_smoke);
+        renderSmoke = !renderSmoke;
+        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderSmoke")) != -1) {
+            glUniform1i(location, renderSmoke);
         }
     }
   }
