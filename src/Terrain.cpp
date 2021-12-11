@@ -411,7 +411,11 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 	{
 		Module& module = modules[i];
 		std::vector<glm::vec4> coms;
-		if (module.startEdge < 0 || module.lastEdge < 0) continue;
+		if (module.startEdge < 0 || module.lastEdge < 0) {
+			module.centerOfMass = glm::vec3(0.f, 0.f, 0.f);
+			module.gridCell = -1;
+			continue;
+		}
 		for (int j = module.startEdge; j <= module.lastEdge; j++)
 		{
 			Edge& edge = edges[j];
@@ -430,17 +434,14 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 
 		module.centerOfMass = centerOfMass / sumOfWeights;
 		module.gridCell = getGridCell(module, glm::ivec3(gx, gy, gz), sideLength);
-		if (module.gridCell >= 4608 || module.gridCell < 0) {
-			std::cout << "module[" << i << "] = " << module.gridCell << std::endl; // should be 0 < num < 4608
-		}
 	}
 
 	std::cout << "Updating grid module adjacency" << std::endl;
 	
 
 	// for every grid cell
-	int sumCell = 0;
-	for (int i = 0; i < 4608; i++)
+	int max = 0;
+	for (int i = 0; i < gx * gy * gz; i++)
 	{
 		GridCell gridCell;
 		gridCell.startModule = gridModuleAdjs.size();
@@ -451,7 +452,6 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 			Module& module = modules[j];
 			if (module.gridCell == i)
 			{
-				sumCell++;
 				GridModuleAdj gma;
 				gma.moduleInx = j;
 				gridModuleAdjs.push_back(gma);
@@ -463,12 +463,11 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 			// no modules in this grid cell
 			gridCell.startModule = gridCell.endModule = -1;
 		}
+		if ((gridCell.endModule - gridCell.startModule + 1) > max) {
+			max = gridCell.endModule - gridCell.startModule + 1;
+		}
 		gridCells.push_back(gridCell);
 	}
-
-	std::cout << gridModuleAdjs.size() << std::endl;
-	std::cout << modules.size() << std::endl;
-	std::cout << sumCell << std::endl;
 
 	end = std::chrono::steady_clock::now();
 	std::cout << "This process took " << FIXED_FLOAT(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.f)<< " seconds." << std::endl;

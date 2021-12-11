@@ -497,7 +497,7 @@ __global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCel
     //#endif
     gridOfMass[k] = deltaM;
 # if __CUDA_ARCH__>=200
-    //if (gridOfMass[k] < -300.f) {
+    /*if (gridOfMass[k] < -300.f) {*/
     //    printf("start: %d, end: %d\n", gridModuleAdjs[gridCell.startModule].moduleInx, gridModuleAdjs[gridCell.endModule].moduleInx);
     //}
     //if (gridModuleAdjs[gridCell.endModule].moduleInx - gridModuleAdjs[gridCell.startModule].moduleInx > 100.f) {
@@ -542,12 +542,6 @@ __global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Edge
     // check if module needs to be culled
     if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
-//# if __CUDA_ARCH__>=200
-//        if (moduleIndices[index] == 5287) {
-//            printf("culled\n");
-//        }
-//
-//#endif
         moduleIndices[index] = -1; // cull the module
 
         // for every edge in the module, cull it so it isn't rendered
