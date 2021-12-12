@@ -18,24 +18,24 @@ __device__ const float k = 0.75;
  * @note range: [0.0, 1.0], units: 1
  * Tunable: directly proportional to combustibility
  */
-__device__ const float c_min = 0.5;
+__device__ const float c_min = 1/*0.5*/;
 
 /**
  * @brief the rate of insulation due to charring
  * @note range: [50,250], units: 1 m^-1
  * Tunable: directly proportional to combustibility
  */
-__device__ const float c_r = 150;
+__device__ const float c_r = 250/*150*/;
 
 /**
  * @brief Mass loss rate
  * @note range: [0.01, 10.0] x 10^-3
  * Tunable: directly proportional to combustibility
  */
-__device__ const float delta_m = 10 * (0.001);
+__device__ const float delta_m = 10e-3;
 
 /** TODO: add description */
-__device__ float lap_constant = 1.f; // TODO: TUNE
+__device__ float lap_constant = 0.08f; // TODO: TUNE
 
 /**
  * @brief the ambient temperature of the modules
@@ -48,13 +48,13 @@ __device__ const float T_amb = 15.f; // TODO: move elsewhere?
  * @brief Heat transfer coeff. for dry wood
  * @note range: [0.03, 0.1], units: 1 s^-1
  */ 
-#define B_DRY 0.03                           // TODO: TUNE
+#define B_DRY 0.1                           // TODO: TUNE
 __device__ const float b_dry = B_DRY; 
 
 /** TODO: add description */
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
-__device__ const float MAX_DELTA_M = 100;// 0.0001;  // TODO: TUNE 
-__device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
+__device__ const float MAX_DELTA_M = 0.1f;// 0.0001;  // TODO: TUNE 
+__device__ const float MAX_DELTA_T = 1000.f;//0.001; // TODO: TUNE
 
 
 // TODO: talk about water
@@ -274,7 +274,13 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float
 //    }
 //#endif 
 
-    return diffusion + temp_diff - changeOfEnergy; 
+//# if __CUDA_ARCH__>=200
+//    if (diffusion + temp_diff - changeOfEnergy != 0.f) {
+//        printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T);
+//    }
+//#endif
+
+    return diffusion + temp_diff - changeOfEnergy;
 }
 
 __device__ float rateOfWaterChange(float changeInMass)
@@ -312,30 +318,44 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
 {
     Module& module = modules[moduleInx];
     float lap = 0.f;
+    int sum = 0;
 
-    if (module.startModule < 0 || module.endModule < 0)
+    // If module has no children or parent, return
+    if ((module.startModule < 0 || module.endModule < 0) && module.parentModule < 0)
         return 0.f; 
 
 
-    // FORGOT TO LOOK AT PARENT
-
-    for (int i = module.startModule; i <= module.endModule; i++)
+    if (module.startModule >= 0 && module.endModule >= 0)
     {
-        Module& adj = modules[moduleEdges[i].moduleInx];
-        if (adj.culled) continue;
-        float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
-        lap += (adj.temperature - module.temperature) / (dist * dist);
+        // Go through all the children of the module
+        for (int i = module.startModule; i <= module.endModule; i++)
+        {
+            Module& adj = modules[moduleEdges[i].moduleInx];
+            if (adj.culled) continue;
+            float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
+            lap += (adj.temperature - module.temperature) / (dist * dist);
+            //# if __CUDA_ARCH__>=200
+            //if (lap != 0.f) {
+            //    printf("%f\n", modules[3581].temperature);
+            //    printf("adj[%d] = %f, module[%d] = %f\n", moduleEdges[i].moduleInx, adj.temperature, moduleInx, module.temperature);
+            //}
+            //#endif
+            sum++;
+        }
     }
+
     if (module.parentModule >= 0)
     {
+        // Go through the module's parent
         Module& adj = modules[module.parentModule];
         if (!adj.culled)
         {
             float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
             lap += (adj.temperature - module.temperature) / (dist * dist);
+            sum++;
         }
     }
-    return lap * lap_constant;
+    return lap * lap_constant / sum;
 }
 
 /**********
@@ -349,8 +369,10 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
 
     Module& module = modules[index];
 
-    if (module.startEdge < 0 || module.lastEdge < 0)
+    if (module.startEdge < 0 || module.lastEdge < 0) {
+        module.culled = true;
         return;
+    }
 
     float area = 0.f;
     float mass = 0.f;
@@ -428,7 +450,7 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     // calculate the current state of the module
     float mass = 0.f;
     float area = 0;
-    float temp = module.temperature; 
+    float temp = module.temperature;
 
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
@@ -452,8 +474,8 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float H = heightOfPyrolyzingFront(H0, A0, mass);
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
-    //float deltaM = glm::clamp(rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
-    float deltaM = rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed);
+    float deltaM = glm::clamp(rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
+    //float deltaM = rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed);
     //if (deltaM != deltaM) deltaM = -0.001f;
     /*if (moduleIndex < 12500 && module.temperature > 150)
         deltaM = -0.0005f;
@@ -476,6 +498,13 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
         node.radius = newRadius;
     }
 
+//# if __CUDA_ARCH__>=200
+//
+//    if (modules[moduleIndex].temperature != 15.0f || moduleIndex == 3581) {
+//        printf("module[%d]: %f\n", moduleIndex, modules[moduleIndex].temperature);
+//    }
+//#endif
+
     // TODO: sync threads here?
 
     /** 3. Update temperature */
@@ -485,15 +514,23 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float W = 0; // TODO: get the water content
     float A_M = area; // lateral surface area 
     float V_M = module.mass / rho;
-# if __CUDA_ARCH__>=200
-    if (T_diff != 0.f) {
-        printf("Module = %d, temp_diff = %f\n", moduleIndex, T_diff);
-    }
-#endif
+
+//# if __CUDA_ARCH__>=200
+//
+//    if (modules[moduleIndex].temperature != 15.0f || moduleIndex == 3581) {
+//        printf("module[%d]: %f\n", moduleIndex, modules[moduleIndex].temperature);
+//    }
+//#endif
+
+//# if __CUDA_ARCH__>=200
+//    if (T_diff != 0.f) {
+//        printf("Module = %d, temp_diff = %f\n", moduleIndex, T_diff);
+//    }
+//#endif
 
 
-    //float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), 0.f, MAX_DELTA_T);
-    float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
+    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
+    //float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
 
     module.temperature += deltaT;
 
@@ -571,6 +608,11 @@ __global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, Mod
     {
         module.culled = true;
     }
+    # if __CUDA_ARCH__>=200
+    if (moduleInx == 5287 && module.culled) {
+        printf("culled 5287\n");
+    }
+#endif 
 }
 
 __global__ void kernCullModules2(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)

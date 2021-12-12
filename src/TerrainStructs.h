@@ -44,6 +44,7 @@ struct Module
     int endModule; // module edge pointer
     int parentModule; // pointer to parent module
     int gridCell;
+    int treeId; // id of the tree this module is associated with
     // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
 
     // module-level parameters

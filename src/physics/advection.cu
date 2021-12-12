@@ -180,7 +180,7 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
         # if __CUDA_ARCH__>=200
         printf("k: %d\n", k);
 #endif 
-        d_temp[k] = T_AMBIANT + 150.f;
+        d_temp[k] = T_AMBIANT + 200.f;
         d_smokedensity[k] = 1.5;
     }
     // if (d_abs(k_z - gridCount.x / 2) * d_abs(k_z - gridCount.x / 2) +
