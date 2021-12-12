@@ -9,7 +9,8 @@
  * @brief the temperatures used in combustion
  * @note min: 150, max: 450, units: celsius
  */
-__device__ const float T0 = 150, T1 = 450;
+__device__ const float T0 = 150;
+__device__ const float T1 = 450;
 
 __device__ const float T_amb = 15.f; // TODO: move elsewhere?
 
@@ -103,7 +104,7 @@ __device__ const float c_WM = 0.5362;
 
 /** TODO: add description */
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
-__device__ const float MAX_DELTA_M = 0.001;// 0.0001;  // TODO: TUNE 
+__device__ const float MAX_DELTA_M = 100;// 0.0001;  // TODO: TUNE 
 __device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
 
 /*******************
@@ -121,25 +122,16 @@ __device__ float getArea(float r0, float r1, float l)
 
 __device__ float getVolume(float r0, float r1, float l)
 {
-    if (r0 < FLT_EPSILON || r1 < FLT_EPSILON)
-        return 0.f;
     return (float)(M_PI / 3) * l * (r0 * r0 + r0 * r1 + r1 * r1);
 }
 
 __device__ float windSpeedFunction(float u)
 {
-# if __CUDA_ARCH__>=200
-    printf("sigmoid(u / u_ref): %f\n", sigmoid(u / u_ref));
-#endif
     return (n_max - 1) * sigmoid(u / u_ref) + 1;
 }
 
 __device__ float computeReactionRate(float temp, float windSpeed)
 {
-# if __CUDA_ARCH__>=200
-    //printf("temp: %f, windSpeed: %f\n", temp, windSpeed);
-    //printf("func: %f, sigmoid: %f\n", windSpeedFunction(windSpeed), sigmoid((temp - T0) / (T1 - T0)));
-#endif
     if (temp < T0)
         return 0;
     else if (temp > T1)
@@ -173,26 +165,6 @@ __device__ float rateOfMassChange(float mass, float H0, float H, float A0, float
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
     float k = computeReactionRate(temp, windSpeed);
-# if __CUDA_ARCH__>=200
-    if (H != H) {
-        printf("H0: %f, A0: %f, mass: %f", H0, A0, mass);
-        printf("H\n");
-    }
-    else if (H_c != H_c) {
-        printf("H_c\n");
-    }
-    else if (c != c) {
-        printf("c\n");
-    }
-    else if (k != k) {
-        //printf("k\n");
-        printf("H: %f, H_c: %f, c: %f, k: %f, frontArea: %f\n", H, H_c, c, k, frontArea);
-    }
-    else if (frontArea != frontArea){
-        printf("frontArea\n");
-        
-    }
-#endif
 
     // TODO: verify this is correct, as it's throwing nan
     return -1 * k * c * frontArea;
@@ -230,9 +202,6 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
         }
         sum += l * prod * (1 + lambda + lambda * lambda);
     }
-# if __CUDA_ARCH__>=200
-    if (sum <= 0.f) printf("gottem\n");
-#endif
     return 1 / sqrt(sum);
 }
 
@@ -245,6 +214,7 @@ __device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, f
 // TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius)
 {
+
     if (rootRadius < FLT_EPSILON) return 0.f;
     int currNodeInx = nodeInx;
     Edge* edge; // will be updated
@@ -413,13 +383,14 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float oldMass = module.mass;
 
     // Module needs to be culled
-    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0) return;
+    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0 || module.culled) return;
 
     /** 1. update the mass */
     // calculate the current state of the module
     float mass = 0.f;
     float area = 0;
-    float temp = module.temperature;
+    float temp = module.temperature; 
+
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
         // for every branch in the module
@@ -427,18 +398,8 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
         Node& fromNode = nodes[edge.fromNode];
 
         float r0 = fromNode.radius;
-        float r1 = edge.radiiRatio * r0;
 
-//# if __CUDA_ARCH__>=200
-//            if (r0 != r0)
-//            {
-//                printf("r0: %f", r0);
-//            }
-//            if (r1 != r1)
-//            {
-//                printf("r1: %f", r1);
-//            }
-//#endif
+        float r1 = edge.radiiRatio * r0;
         float l = edge.length;
 
         float volume = getVolume(r0, r1, l);
@@ -517,32 +478,11 @@ __global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCel
     for (int i = gridModuleAdjs[gridCell.startModule].moduleInx; i <= gridModuleAdjs[gridCell.endModule].moduleInx; i++)
     {
         if (modules[i].deltaM < -MAX_DELTA_M || modules[i].deltaM > 0.f) {
-            //# if __CUDA_ARCH__>=200
-            //if (modules[i].deltaM != 0.f) {
-            //    printf("i: %d, %f\n", i, modules[i].deltaM);
-            //}
-            //#endif
             continue;
         }
         deltaM += modules[i].deltaM;
     }
-
-    //# if __CUDA_ARCH__>=200
-    //printf("start: %d, end: %d\n", gridModuleAdjs[gridCell.startModule].moduleInx, gridModuleAdjs[gridCell.endModule].moduleInx);
-    //    
-
-    //#endif
     gridOfMass[k] = deltaM;
-# if __CUDA_ARCH__>=200
-    /*if (gridOfMass[k] < -300.f) {*/
-    //    printf("start: %d, end: %d\n", gridModuleAdjs[gridCell.startModule].moduleInx, gridModuleAdjs[gridCell.endModule].moduleInx);
-    //}
-    //if (gridModuleAdjs[gridCell.endModule].moduleInx - gridModuleAdjs[gridCell.startModule].moduleInx > 100.f) {
-    //    printf("gridCell: %d, start: %d, end: %d\n", k, gridModuleAdjs[gridCell.startModule].moduleInx, gridModuleAdjs[gridCell.endModule].moduleInx);
-    //}
-     //printf("d_deltaM[%d] = %f\n", k, gridOfMass[k]);
-
-#endif
 }
 
 __device__ float getGridCell(Module& module, int3 gridCount, float blockSize)
@@ -569,7 +509,7 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
 }
 
 // TODO: cull children of modules
-__global__ void kernCullModules(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
+__global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
@@ -585,17 +525,26 @@ __global__ void kernCullModules(int N, int* moduleIndices, Module* modules, Modu
         for (int i = module.startModule; i < module.endModule; i++)
         {
             modules[moduleEdges[i].moduleInx].culled = true;
-
         }
     }
+}
 
-    __syncthreads();
+__global__ void kernCullModules2(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
 
+    Module& module = modules[moduleIndices[index]];
+
+    // check if module needs to be culled
     if (module.culled)
-    {   
+    {
         moduleIndices[index] = -1; // cull the module
 
-       // for every edge in the module, cull it so it isn't rendered
+        if (module.startEdge < 0 || module.lastEdge < 0)
+            return;
+
+        // for every edge in the module, cull it so it isn't rendered
         for (int i = module.startEdge; i <= module.lastEdge && i >= 0; i++)
         {
             Edge& edge = edges[i];
