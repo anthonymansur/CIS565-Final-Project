@@ -29,19 +29,19 @@ __device__ float DELTA_T = 0.01f;
 /**
 * TUNABLE PHYSICS PARAMETERS
 */
-__device__ float T_AMBIANT = 20.0f;             // ambiant air temperature without regards to heat added by fire
+__device__ float T_AMBIANT = 20.0f;             // ambiant air temperature without regards to heat added by fire     
 __device__ float P_ATM = 0.0f;                  // atmospheric pressure
 __device__ float BUOY_ALPHA = 0.3f;             // smoke density modifier for buoyancy force computation
 __device__ float BUOY_BETA = 0.1f;              // temperature modifier for buoyancy force computation
 __device__ int SEMILAGRANGIAN_ITERS = 5;        // number of iterations for semi-lagrangian advection solve
 __device__ float VORTICITY_EPSILON = 1.f;       // scalar for amount of dissipated energy added back to system
-__device__ float TEMPERATURE_ALPHA = 8e-8;      // temperature diffusion coefficient
-__device__ float TEMPERATURE_GAMMA = -4e-7;    // radiative cooling coefficient
+__device__ float TEMPERATURE_ALPHA = 8e-8;      // temperature diffusion coefficient                                 // TUNABLE
+__device__ float TEMPERATURE_GAMMA = -4e-7;    // radiative cooling coefficient                                      // TUNABLE
 __device__ int PRESSURE_JACOBI_ITERATIONS = 10; // number of iterations for jacobi pressure solve
 __device__ float EVAP = 0.5362f;                // module water to mass ratio
 __device__ float SMOKE_MASS = 16.f;             // smoke mass contribution coefficient
 __device__ float SMOKE_WATER = 200.f;           // smoke water contribution coefficient
-__device__ float TAU = 200.f;                   // temperature change per pass of wood combusted
+__device__ float TAU = 200.f;                   // temperature change per pass of wood combusted              // TUNABLE
 __device__ int SMOKE_RAY_SQRT_COUNT = 60;
 __device__ float SMOKE_EXTINCTION_COEFF = 15e1;
 __device__ float SMOKE_ALBEDO = 0.7f;

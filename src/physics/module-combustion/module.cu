@@ -81,13 +81,13 @@ __device__ float alpha = 0.02; // TODO: first paper had different numbers?
 __device__ float alpha_M = 0.75;
 
 /** TODO: add description */
-__device__ float lap_constant = 15.f;//1.648f; // TODO: TUNE
+__device__ float lap_constant = 0.85f; // TODO: TUNE
 
 /**
  * @brief Heat transfer coeff. for dry wood 
  * @note range: [0.03, 0.1], units: 1 s^-1
  */
-#define B_DRY 0.01
+#define B_DRY 0.03
 __device__ const float b_dry = B_DRY; // TODO: TUNE
 
 __device__ const float rateMod = 0.1f;
@@ -169,7 +169,7 @@ __device__ float rateOfMassChange(float mass, float H0, float H, float A0, float
     float k = computeReactionRate(temp, windSpeed);
 
     // TODO: verify this is correct, as it's throwing nan
-    return -1 * k * c * frontArea * rateMod;
+    return -rateMod * k * c * frontArea;
 }
 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
@@ -291,12 +291,24 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
     if (module.startModule < 0 || module.endModule < 0)
         return 0.f; 
 
+
+    // FORGOT TO LOOK AT PARENT
+
     for (int i = module.startModule; i <= module.endModule; i++)
     {
         Module& adj = modules[moduleEdges[i].moduleInx];
         if (adj.culled) continue;
         float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
         lap += (adj.temperature - module.temperature) / (dist * dist);
+    }
+    if (module.parentModule >= 0)
+    {
+        Module& adj = modules[module.parentModule];
+        if (!adj.culled)
+        {
+            float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
+            lap += (adj.temperature - module.temperature) / (dist * dist);
+        }
     }
     return lap * lap_constant;
 }
@@ -515,19 +527,16 @@ __global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, Mod
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
+    
+    int moduleInx = moduleIndices[index];
+    if (moduleInx < 0) return;
 
-    Module& module = modules[moduleIndices[index]];
+    Module& module = modules[moduleInx];
 
     // check if module needs to be culled
     if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
         module.culled = true;
-
-        // cull children
-        for (int i = module.startModule; i < module.endModule; i++)
-        {
-            modules[moduleEdges[i].moduleInx].culled = true;
-        }
     }
 }
 
@@ -536,23 +545,39 @@ __global__ void kernCullModules2(int N, int* moduleIndices, Module* modules, Mod
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
-    Module& module = modules[moduleIndices[index]];
+    int moduleInx = moduleIndices[index];
+    if (moduleInx < 0) return;
 
-    // check if module needs to be culled
+    // check if culled or one of its parent modules has been culled
+    Module& module = modules[moduleInx];
+    Module* currModule = &modules[moduleInx];
+    while (currModule->parentModule >= 0 && !module.culled)
+    {
+        currModule = &modules[currModule->parentModule];
+        if (currModule->mass < MASS_EPSILON)
+        {
+            module.culled = true;
+            break;
+        }
+    }
     if (module.culled)
     {
         moduleIndices[index] = -1; // cull the module
 
-        if (module.startEdge < 0 || module.lastEdge < 0)
-            return;
+        // reset module values
+        module.deltaM = 0.f;
 
         // for every edge in the module, cull it so it isn't rendered
-        for (int i = module.startEdge; i <= module.lastEdge && i >= 0; i++)
+        if (module.startEdge < 0 || module.lastEdge < 0) return;
+        for (int i = module.startEdge; i <= module.lastEdge; i++)
         {
             Edge& edge = edges[i];
             edge.culled = true;
-            nodes[edge.fromNode].radius = 0.f;
-            nodes[edge.toNode].radius = 0.f;
+            if (edge.fromNode >= 0 && edge.toNode >= 0)
+            {
+                nodes[edge.fromNode].radius = 0.f;
+                nodes[edge.toNode].radius = 0.f;
+            }
         }
     }
 }
