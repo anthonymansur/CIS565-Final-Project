@@ -111,7 +111,7 @@ __device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
 ********************/
 __device__ float sigmoid(float x)
 {
-    3 * x * x - 2 * x * x * x;
+    return 3 * x * x - 2 * x * x * x;
 }
 
 __device__ float getArea(float r0, float r1, float l)
@@ -128,11 +128,18 @@ __device__ float getVolume(float r0, float r1, float l)
 
 __device__ float windSpeedFunction(float u)
 {
+# if __CUDA_ARCH__>=200
+    printf("sigmoid(u / u_ref): %f\n", sigmoid(u / u_ref));
+#endif
     return (n_max - 1) * sigmoid(u / u_ref) + 1;
 }
 
 __device__ float computeReactionRate(float temp, float windSpeed)
 {
+# if __CUDA_ARCH__>=200
+    //printf("temp: %f, windSpeed: %f\n", temp, windSpeed);
+    //printf("func: %f, sigmoid: %f\n", windSpeedFunction(windSpeed), sigmoid((temp - T0) / (T1 - T0)));
+#endif
     if (temp < T0)
         return 0;
     else if (temp > T1)
@@ -166,25 +173,26 @@ __device__ float rateOfMassChange(float mass, float H0, float H, float A0, float
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
     float k = computeReactionRate(temp, windSpeed);
-//# if __CUDA_ARCH__>=200
-//    if (H != H) {
-//        printf("H0: %f, A0: %f, mass: %f", H0, A0, mass);
-//        printf("H\n");
-//    }
-//    else if (H_c != H_c) {
-//        printf("H_c\n");
-//    }
-//    else if (c != c) {
-//        printf("c\n");
-//    }
-//    else if (k != k) {
-//        printf("k\n");
-//    }
-//    else if (frontArea != frontArea){
-//        printf("frontArea\n");
-//        printf("H: %f, H_c: %f, c: %f, k: %f, frontArea: %f\n", H, H_c, c, k, frontArea);
-//    }
-//#endif
+# if __CUDA_ARCH__>=200
+    if (H != H) {
+        printf("H0: %f, A0: %f, mass: %f", H0, A0, mass);
+        printf("H\n");
+    }
+    else if (H_c != H_c) {
+        printf("H_c\n");
+    }
+    else if (c != c) {
+        printf("c\n");
+    }
+    else if (k != k) {
+        //printf("k\n");
+        printf("H: %f, H_c: %f, c: %f, k: %f, frontArea: %f\n", H, H_c, c, k, frontArea);
+    }
+    else if (frontArea != frontArea){
+        printf("frontArea\n");
+        
+    }
+#endif
 
     // TODO: verify this is correct, as it's throwing nan
     return -1 * k * c * frontArea;
@@ -222,7 +230,9 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
         }
         sum += l * prod * (1 + lambda + lambda * lambda);
     }
-
+# if __CUDA_ARCH__>=200
+    if (sum <= 0.f) printf("gottem\n");
+#endif
     return 1 / sqrt(sum);
 }
 
@@ -418,19 +428,23 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
 
         float r0 = fromNode.radius;
         float r1 = edge.radiiRatio * r0;
+
+//# if __CUDA_ARCH__>=200
+//            if (r0 != r0)
+//            {
+//                printf("r0: %f", r0);
+//            }
+//            if (r1 != r1)
+//            {
+//                printf("r1: %f", r1);
+//            }
+//#endif
         float l = edge.length;
 
         float volume = getVolume(r0, r1, l);
         mass += volume * rho; // mass = density * volume 
         area += getArea(r0, r1, l);
     }
-
-# if __CUDA_ARCH__>=200
-    if (mass != mass)
-    {
-        printf("mass: %f", mass);
-    }
-#endif
 
     // compute the change in mass
     float H0 = rootNode.startRadius;
@@ -440,6 +454,7 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float windSpeed = 0; // TODO: implement
     //float deltaM = glm::clamp(rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
     float deltaM = rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed);
+    //if (deltaM != deltaM) deltaM = -0.001f;
     /*if (moduleIndex < 12500 && module.temperature > 150)
         deltaM = -0.0005f;
     else
