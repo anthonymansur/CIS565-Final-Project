@@ -81,7 +81,7 @@ __device__ float alpha = 0.02; // TODO: first paper had different numbers?
 __device__ float alpha_M = 0.75;
 
 /** TODO: add description */
-__device__ float lap_constant = 0.85f; // TODO: TUNE
+__device__ float lap_constant = 0.95f; // TODO: TUNE
 
 /**
  * @brief Heat transfer coeff. for dry wood 
