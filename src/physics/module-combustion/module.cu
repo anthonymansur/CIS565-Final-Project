@@ -18,24 +18,24 @@ __device__ const float k = 0.75;
  * @note range: [0.0, 1.0], units: 1
  * Tunable: directly proportional to combustibility
  */
-__device__ const float c_min = 0.5;
+__device__ const float c_min = 1/*0.5*/;
 
 /**
  * @brief the rate of insulation due to charring
  * @note range: [50,250], units: 1 m^-1
  * Tunable: directly proportional to combustibility
  */
-__device__ const float c_r = 150;
+__device__ const float c_r = 250/*150*/;
 
 /**
  * @brief Mass loss rate
  * @note range: [0.01, 10.0] x 10^-3
  * Tunable: directly proportional to combustibility
  */
-__device__ const float delta_m = 10 * (0.001);
+__device__ const float delta_m = 10e-3;
 
 /** TODO: add description */
-__device__ float lap_constant = 1.f; // TODO: TUNE
+__device__ float lap_constant = 0.00001f; // TODO: TUNE
 
 /**
  * @brief the ambient temperature of the modules
@@ -48,7 +48,7 @@ __device__ const float T_amb = 15.f; // TODO: move elsewhere?
  * @brief Heat transfer coeff. for dry wood
  * @note range: [0.03, 0.1], units: 1 s^-1
  */ 
-#define B_DRY 0.03                           // TODO: TUNE
+#define B_DRY 0.1                           // TODO: TUNE
 __device__ const float b_dry = B_DRY; 
 
 /** TODO: add description */
@@ -268,7 +268,7 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float
     if (T_M > 150) // start of combustion
         changeOfEnergy = (c_bar * A_M * powf(T_M - T_sat, 3)) / (V_M * rho * c_M);
 
-    return diffusion + temp_diff - changeOfEnergy; 
+    return /*diffusion + */temp_diff/* - changeOfEnergy*/;
 }
 
 __device__ float rateOfWaterChange(float changeInMass)
@@ -306,30 +306,38 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
 {
     Module& module = modules[moduleInx];
     float lap = 0.f;
+    int sum = 0;
 
-    if (module.startModule < 0 || module.endModule < 0)
+    // If module has no children or parent, return
+    if ((module.startModule < 0 || module.endModule < 0) && module.parentModule < 0)
         return 0.f; 
 
 
-    // FORGOT TO LOOK AT PARENT
-
-    for (int i = module.startModule; i <= module.endModule; i++)
+    if (module.startModule >= 0 && module.endModule >= 0)
     {
-        Module& adj = modules[moduleEdges[i].moduleInx];
-        if (adj.culled) continue;
-        float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
-        lap += (adj.temperature - module.temperature) / (dist * dist);
+        // Go through all the children of the module
+        for (int i = module.startModule; i <= module.endModule; i++)
+        {
+            Module& adj = modules[moduleEdges[i].moduleInx];
+            if (adj.culled) continue;
+            float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
+            lap += (adj.temperature - module.temperature) / (dist * dist);
+            sum++;
+        }
     }
+
     if (module.parentModule >= 0)
     {
+        // Go through the module's parent
         Module& adj = modules[module.parentModule];
         if (!adj.culled)
         {
             float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
             lap += (adj.temperature - module.temperature) / (dist * dist);
+            sum++;
         }
     }
-    return lap * lap_constant;
+    return lap * lap_constant / sum;
 }
 
 /**********
@@ -479,7 +487,7 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float W = 0; // TODO: get the water content
     float A_M = area; // lateral surface area 
     float V_M = module.mass / rho;
-    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), 0.f, MAX_DELTA_T);
+    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
 
     module.temperature += deltaT;
 

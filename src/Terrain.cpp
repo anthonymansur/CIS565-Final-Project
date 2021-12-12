@@ -228,6 +228,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 			module.startModule = -1;
 			module.endModule = -1;
 			module.parentModule = -1;
+			module.treeId = treeId;
 
 			if (module.startNode == module.lastNode)
 				module.startEdge = module.lastEdge = -1.f;
@@ -249,19 +250,20 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 					childModuleInx++)
 				{
 					Module& childModule = modules[childModuleInx];
-					Node& rootNode = nodes[childModule.startNode];
+					Node& rootNode = nodes[childModule.startNode]; // TODO: make sure this is the root node 
 
 					// go through every module in the tree to see which module contains the connection
+					bool foundAtAll = false;
 					for (int parentModuleInx = treeStartModule; 
-						parentModuleInx < modules.size(); 
+						parentModuleInx < modules.size(); // parent will always have a lower index
 						parentModuleInx++)
 					{
-						if (parentModuleInx == childModuleInx)
-							continue; // only look at other modules.
+						if (childModuleInx == parentModuleInx)
+							continue;
 
 						Module& potentialParentModule = modules[parentModuleInx];
 						bool found = false;
-						for (int potentialConnectionNodeInx = potentialParentModule.startNode; 
+						for (int potentialConnectionNodeInx = potentialParentModule.startNode;/* +1; // root node cannot be a parent of a module */
 							potentialConnectionNodeInx <= potentialParentModule.lastNode; 
 							potentialConnectionNodeInx++)
 						{
@@ -271,6 +273,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 							{
 								// connection node has been found
 								found = true;
+								foundAtAll = true;
 								childModule.previousNode = potentialConnectionNodeInx;
 								childModule.parentModule = parentModuleInx;
 
@@ -290,7 +293,6 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 				}
 
 				// update the adjacency list of each module in the tree
-				int startEdge = edges.size();
 				for (std::map<int, std::vector<int>>::iterator it = moduleMap.begin(); it != moduleMap.end(); ++it)
 				{
 					Module& prevModule = modules[it->first];
