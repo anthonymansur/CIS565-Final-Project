@@ -515,19 +515,16 @@ __global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, Mod
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
+    
+    int moduleInx = moduleIndices[index];
+    if (moduleInx < 0) return;
 
-    Module& module = modules[moduleIndices[index]];
+    Module& module = modules[moduleInx];
 
     // check if module needs to be culled
     if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
         module.culled = true;
-
-        // cull children
-        for (int i = module.startModule; i < module.endModule; i++)
-        {
-            modules[moduleEdges[i].moduleInx].culled = true;
-        }
     }
 }
 
@@ -536,23 +533,36 @@ __global__ void kernCullModules2(int N, int* moduleIndices, Module* modules, Mod
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
-    Module& module = modules[moduleIndices[index]];
+    int moduleInx = moduleIndices[index];
+    if (moduleInx < 0) return;
 
-    // check if module needs to be culled
+    // check if culled or one of its parent modules has been culled
+    Module& module = modules[moduleInx];
+    Module* currModule = &modules[moduleInx];
+    while (currModule->parentModule >= 0 && !module.culled)
+    {
+        currModule = &modules[currModule->parentModule];
+        if (currModule->mass < MASS_EPSILON)
+        {
+            module.culled = true;
+            break;
+        }
+    }
     if (module.culled)
     {
         moduleIndices[index] = -1; // cull the module
 
-        if (module.startEdge < 0 || module.lastEdge < 0)
-            return;
-
         // for every edge in the module, cull it so it isn't rendered
-        for (int i = module.startEdge; i <= module.lastEdge && i >= 0; i++)
+        if (module.startEdge < 0 || module.lastEdge < 0) return;
+        for (int i = module.startEdge; i <= module.lastEdge; i++)
         {
             Edge& edge = edges[i];
             edge.culled = true;
-            nodes[edge.fromNode].radius = 0.f;
-            nodes[edge.toNode].radius = 0.f;
+            if (edge.fromNode >= 0 && edge.toNode >= 0)
+            {
+                nodes[edge.fromNode].radius = 0.f;
+                nodes[edge.toNode].radius = 0.f;
+            }
         }
     }
 }
