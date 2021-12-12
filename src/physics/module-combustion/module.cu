@@ -257,6 +257,7 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
 }
 
 // TODO: diffusion of adjacent modules not yet correctlyimplemented
+//rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M)
 __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
@@ -267,6 +268,11 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float
     float changeOfEnergy = 0;
     if (T_M > 150) // start of combustion
         changeOfEnergy = (c_bar * A_M * powf(T_M - T_sat, 3)) / (V_M * rho * c_M);
+//# if __CUDA_ARCH__>=200
+//    if (diffusion + temp_diff - changeOfEnergy != 0.f) {
+//        printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f, alpha_M = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T, alpha_M);
+//    }
+//#endif 
 
     return diffusion + temp_diff - changeOfEnergy; 
 }
@@ -479,7 +485,15 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float W = 0; // TODO: get the water content
     float A_M = area; // lateral surface area 
     float V_M = module.mass / rho;
-    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), 0.f, MAX_DELTA_T);
+# if __CUDA_ARCH__>=200
+    if (T_diff != 0.f) {
+        printf("Module = %d, temp_diff = %f\n", moduleIndex, T_diff);
+    }
+#endif
+
+
+    //float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), 0.f, MAX_DELTA_T);
+    float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
 
     module.temperature += deltaT;
 
