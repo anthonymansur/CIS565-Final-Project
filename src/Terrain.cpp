@@ -408,6 +408,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 	std::cout << "The bounding box (x,y,z) of this scene is: (" << maxPos[0] - minPos[0] << ", "
 		<< maxPos[1] - minPos[1] << ", " << maxPos[2] - minPos[2] << ") meters." << std::endl;
 
+	// Compute center of mass for each module 
 	for (int i = 0; i < modules.size(); i++)
 	{
 		Module& module = modules[i];
@@ -417,12 +418,15 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 			module.gridCell = -1;
 			continue;
 		}
+
+		// For each branch in this module
 		for (int j = module.startEdge; j <= module.lastEdge; j++)
 		{
 			Edge& edge = edges[j];
 			Node& fromNode = nodes[edge.fromNode];
 			Node& toNode = nodes[edge.toNode];
 
+			// get center of mass of this branch
 			coms.push_back(coneCenterOfMass(fromNode.position, toNode.position, fromNode.radius, toNode.radius));
 		}
 		glm::vec3 centerOfMass{0.f};
@@ -434,6 +438,13 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 		}
 
 		module.centerOfMass = centerOfMass / sumOfWeights;
+
+		//if (module.centerOfMass.x < module.boundingMin.x || module.centerOfMass.x > module.boundingMax.x ||
+		//	module.centerOfMass.y < module.boundingMin.y || module.centerOfMass.y > module.boundingMax.y ||
+		//	module.centerOfMass.z < module.boundingMin.z || module.centerOfMass.z > module.boundingMax.z) {
+		//	std::cout << "sad" << std::endl;
+		//}
+
 		module.gridCell = getGridCell(module, glm::ivec3(gx, gy, gz), sideLength);
 	}
 

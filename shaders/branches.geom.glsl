@@ -27,11 +27,11 @@ void main()
 {    
     /** Render branch cones */
     // scale radii
-    float r1 = geo_v0[0].w * 2.0;
-    float r2 = geo_v1[0].w * 2.0;
+    float r1 = geo_v0[0].w;
+    float r2 = geo_v1[0].w;
     // scale height of trees
-    vec4 g0 = vec4(geo_v0[0].x, geo_v0[0].y * 1.35, geo_v0[0].z, geo_v0[0].w);
-    vec4 g1 = vec4(geo_v1[0].x, geo_v1[0].y * 1.35, geo_v1[0].z, geo_v1[0].w);
+    vec4 g0 = vec4(geo_v0[0].x, geo_v0[0].y, geo_v0[0].z, geo_v0[0].w);
+    vec4 g1 = vec4(geo_v1[0].x, geo_v1[0].y, geo_v1[0].z, geo_v1[0].w);
     // find the axis and tangent vectors
     vec3 axis = normalize(g1.xyz - g0.xyz);
     vec3 perpX = createPerpendicular(g1.xyz, g0.xyz);

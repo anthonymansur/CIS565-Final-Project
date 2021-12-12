@@ -62,9 +62,11 @@ float3 gridSize = { 60.f, 20.f, 60.f };
 float sideLength = 2.5f; // "blockSize"
 
 // gui variables
-static bool renderLeaves = true;
-static bool renderModuleTemp = false;
-static bool renderSmoke = true;
+static bool renderLeaves = false;
+static bool renderModuleTemp = true;
+static bool renderSmoke = false;
+
+static float totalTime = 0.f;
 
 // functions
 bool init(int argc, char** argv);
@@ -313,6 +315,7 @@ void runCUDA()
     // cudaEventRecord(start);
     // // What you want to time goes here
     Simulation::stepSimulation(DT, gridCount, gridSize, sideLength, d_out);
+    totalTime += DT;
 
     // cudaEventRecord(stop);
 
@@ -368,7 +371,7 @@ void initShaders(GLuint* program) {
     }
 
     if ((location = glGetUniformLocation(program[PROG_branches], "u_renderTemp")) != -1) {
-        glUniform1i(location, false);
+        glUniform1i(location, renderModuleTemp);
     }
     if ((location = glGetUniformLocation(program[PROG_branches], "u_renderLeaves")) != -1) {
         glUniform1i(location, renderLeaves);
@@ -385,8 +388,11 @@ void initShaders(GLuint* program) {
     if ((location = glGetUniformLocation(program[PROG_fluid], "u_model")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &model[0][0]);
     }
-    if ((location = glGetUniformLocation(program[PROG_branches], "u_renderSmoke")) != -1) {
+    if ((location = glGetUniformLocation(program[PROG_fluid], "u_renderSmoke")) != -1) {
         glUniform1i(location, renderSmoke);
+    }
+    if ((location = glGetUniformLocation(program[PROG_fluid], "u_time")) != -1) {
+        glUniform1i(location, totalTime);
     }
 }
 

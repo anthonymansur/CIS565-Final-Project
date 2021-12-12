@@ -81,14 +81,16 @@ __device__ float alpha = 0.02; // TODO: first paper had different numbers?
 __device__ float alpha_M = 0.75;
 
 /** TODO: add description */
-__device__ float lap_constant = 500.f; // TODO: TUNE
+__device__ float lap_constant = 15.f;//1.648f; // TODO: TUNE
 
 /**
  * @brief Heat transfer coeff. for dry wood 
  * @note range: [0.03, 0.1], units: 1 s^-1
  */
-#define B_DRY 0.1
+#define B_DRY 0.01
 __device__ const float b_dry = B_DRY; // TODO: TUNE
+
+__device__ const float rateMod = 0.1f;
 
 /**
  * @brief Heat transfer coeff. for wet wood 
@@ -167,7 +169,7 @@ __device__ float rateOfMassChange(float mass, float H0, float H, float A0, float
     float k = computeReactionRate(temp, windSpeed);
 
     // TODO: verify this is correct, as it's throwing nan
-    return -1 * k * c * frontArea;
+    return -1 * k * c * frontArea * rateMod;
 }
 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)

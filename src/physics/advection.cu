@@ -175,7 +175,7 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
 
     const int k = flatten(gridCount, k_x, k_y, k_z);
     if (k_x < 14 && k_x > 12 &&
-        k_y < 2 && k_y > 0 &&
+        k_y < 8 && k_y > 0 &&
         k_z < 14 && k_z > 12) {
         # if __CUDA_ARCH__>=200
         printf("k: %d\n", k);
@@ -335,8 +335,6 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     float dtC = TEMPERATURE_GAMMA * powf(d_oldtemp[k] - T_AMBIANT, 4);
     if (d_oldtemp[k] < T_AMBIANT) dtC = 0.f; // if cooler than ambiant already shouldn't cool down
     //float dtC = TEMPERATURE_GAMMA * powf(scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT) - T_AMBIANT, 4);
-    //dtC = glm::clamp(dtC, -5.0f, 0.f);
-    //float dtR = TEMPERATURE_GAMMA * powf(d_oldtemp[k] - T_AMBIANT, 4);
     lap[k] = laplacian(gridCount, blockSize, d_oldtemp, T_AMBIANT, k_x, k_y, k_z);
 
     __syncthreads();
@@ -348,19 +346,19 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     float dtm = TAU * d_deltaM[k];
 
     d_temp[k] = d_oldtemp[k] + (-dtm + dtD + dtC) * 2 * DELTA_T;
-    //# if __CUDA_ARCH__>=200
-    //if ( k == 2533) {
+    # if __CUDA_ARCH__>=200
+    //if ( k == 2533 || d_temp[k] > 50.f) {
     //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
     //}
-    ////if (lap[k] != 0.0f) {
-    ////    printf("lap[%d] = %f\n", k, lap[k]);
-    ////}
-    ////if (d_deltaM[k] != 0.f) {
-    ////    printf("advection %f\n", d_deltaM[k]);
-    ////}
-    ////
-    //   
-    //#endif 
+    //if (lap[k] != 0.0f) {
+    //    printf("lap[%d] = %f\n", k, lap[k]);
+    //}
+    //if (d_deltaM[k] != 0.f) {
+    //    printf("advection %f\n", d_deltaM[k]);
+    //}
+    //
+       
+    #endif 
 }
 
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 
