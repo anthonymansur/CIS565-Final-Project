@@ -348,19 +348,19 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     float dtm = TAU * d_deltaM[k];
 
     d_temp[k] = d_oldtemp[k] + (-dtm + dtD + dtC) * 2 * DELTA_T;
-    # if __CUDA_ARCH__>=200
-    if ( k == 2533) {
-        printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
-    }
-    //if (lap[k] != 0.0f) {
-    //    printf("lap[%d] = %f\n", k, lap[k]);
+    //# if __CUDA_ARCH__>=200
+    //if ( k == 2533) {
+    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
     //}
-    //if (d_deltaM[k] != 0.f) {
-    //    printf("advection %f\n", d_deltaM[k]);
-    //}
-    //
-       
-    #endif 
+    ////if (lap[k] != 0.0f) {
+    ////    printf("lap[%d] = %f\n", k, lap[k]);
+    ////}
+    ////if (d_deltaM[k] != 0.f) {
+    ////    printf("advection %f\n", d_deltaM[k]);
+    ////}
+    ////
+    //   
+    //#endif 
 }
 
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 

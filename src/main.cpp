@@ -104,6 +104,7 @@ int main(int argc, char* argv[])
             //std::cout << "Check node: " << i << std::endl;
             nsum++;
         }
+
         i++;
     }
     int msum = 0;
@@ -270,20 +271,23 @@ void mainLoop(int NUM_OF_BRANCHES)
         glPointSize(1.f);
 
         /** Draw smoke */
-        glUseProgram(program[PROG_fluid]);
-        glBindVertexArray(VAO_smoke);
-        glDisable(GL_CULL_FACE);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        if (renderSmoke)
+        {
+            glUseProgram(program[PROG_fluid]);
+            glBindVertexArray(VAO_smoke);
+            glDisable(GL_CULL_FACE);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glDrawElements(GL_TRIANGLES, 3 * 6 * gridCount.x * gridCount.y * gridCount.z, GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, 3 * 6 * gridCount.x * gridCount.y * gridCount.z, GL_UNSIGNED_INT, 0);
 
-        glDisable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_CULL_FACE);
-
+            glDisable(GL_BLEND);
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_CULL_FACE);
+        }
+        
         glBindVertexArray(0);
         glUseProgram(0);
 

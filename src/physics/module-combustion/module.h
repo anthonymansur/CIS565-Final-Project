@@ -240,7 +240,8 @@ __global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCel
 __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize);
 
 /** TODO: add description */
-__global__ void kernCullModules(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges);
+__global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges);
+__global__ void kernCullModules2(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges);
 
 /** TODO: add description */
 __device__ float getGridCell(Module& module, int3 gridCount, float blockSize);
