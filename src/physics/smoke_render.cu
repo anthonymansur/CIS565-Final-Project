@@ -126,8 +126,17 @@ __global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, float*
     if(isnan(d_smokeRadiance[k]) || isinf(d_smokeRadiance[k])) d_smokeRadiance[k] = 0;
     //const float transparency = expf(-(fabsf(SMOKE_EXTINCTION_COEFF/d_smoke[k]))* blockSize);
     //const float intensity = d_smokeRadiance[k];
-    const float intensity = d_temp[k] / 300.f;
+    float intensity = d_temp[k] / 300.f;
     float transparency = d_temp[k] / 300.f;
+    if (k_x < 14 && k_x > 12 &&
+        k_y < 8 && k_y > 0 &&
+        k_z < 14 && k_z > 12) {
+        intensity = 1.f;
+        transparency = 1.f;
+    }
+    else {
+        transparency = 0.f;
+    }
     //if (d_temp[k] > T_AMBIANT) {
     //    transparency = 0.1f;
     //}
