@@ -316,7 +316,11 @@ void runCUDA()
     // // What you want to time goes here
     Simulation::stepSimulation(DT, gridCount, gridSize, sideLength, d_out);
     totalTime += DT;
-
+    GLuint location;
+    glUseProgram(program[PROG_fluid]);
+    if ((location = glGetUniformLocation(program[PROG_fluid], "u_time")) != -1) {
+        glUniform1f(location, totalTime);
+    }
     // cudaEventRecord(stop);
 
     // cudaEventSynchronize(stop);
