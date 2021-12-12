@@ -50,6 +50,10 @@ At a high-level, we have discretized our simulation space into smaller quantitie
 ## Rendering
 Thank you Torsten Hädrich and your team for providing us with the forest scene files used in our simulation.
 ### Branches and Leaves
+In order to render our branches we maintained a series of points corresponding to the beginning and end positions of each branch. The points are stored as vec4's, with the fourth component corresponding to the branch radius at that point. We use this method because it gives us all of the information we need in order to render a branch. With this series of points being passed into our shader pipeline we are then able to find the axis from one point to another, as well as the perpendicular vector to render the top and bottom of the branch. The branches are rendering as cylinders, or truncated cones, and are formed using triangle strips. This gives us the series of cylindrical branches that you see in the render. As the branches burn and lose mass, the radius component of the vec4's gets updated, and our branches become smaller.
+
+We also pass another vector into our shader pipeline that indicates whether there are leaves on a given branch. If a branch has leaves we generate a certain amount of randomness in the direction, length, color, and orientation of the leaves. This gives us a more realistic looking render with a wide variety of leaves. 
+
 ### Smoke and Fire
 
 ## References
