@@ -315,12 +315,16 @@ void runCUDA()
     // cudaEventRecord(start);
     // // What you want to time goes here
     Simulation::stepSimulation(DT, gridCount, gridSize, sideLength, d_out);
+
+    glUseProgram(program[PROG_fluid]);
+    glBindVertexArray(VAO_smoke);
     totalTime += DT;
     GLuint location;
-    glUseProgram(program[PROG_fluid]);
     if ((location = glGetUniformLocation(program[PROG_fluid], "u_time")) != -1) {
         glUniform1f(location, totalTime);
     }
+    glBindVertexArray(0);
+    glUseProgram(0);
     // cudaEventRecord(stop);
 
     // cudaEventSynchronize(stop);
@@ -396,7 +400,7 @@ void initShaders(GLuint* program) {
         glUniform1i(location, renderSmoke);
     }
     if ((location = glGetUniformLocation(program[PROG_fluid], "u_time")) != -1) {
-        glUniform1i(location, totalTime);
+        glUniform1f(location, totalTime);
     }
 }
 
@@ -663,7 +667,7 @@ void errorCallback(int error, const char *description) {
         glUseProgram(program[PROG_fluid]);
         glBindVertexArray(VAO_smoke);
         renderSmoke = !renderSmoke;
-        if ((location = glGetUniformLocation(program[PROG_branches], "u_renderSmoke")) != -1) {
+        if ((location = glGetUniformLocation(program[PROG_fluid], "u_renderSmoke")) != -1) {
             glUniform1i(location, renderSmoke);
         }
     }
