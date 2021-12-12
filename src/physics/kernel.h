@@ -29,7 +29,7 @@ __device__ float DELTA_T = 0.01f;
 /**
 * TUNABLE PHYSICS PARAMETERS
 */
-__device__ float T_AMBIANT = 20.0f;             // ambiant air temperature without regards to heat added by fire     
+__device__ float T_AMBIANT = 15.0f;             // ambiant air temperature without regards to heat added by fire     
 __device__ float P_ATM = 0.0f;                  // atmospheric pressure
 __device__ float BUOY_ALPHA = 0.3f;             // smoke density modifier for buoyancy force computation
 __device__ float BUOY_BETA = 0.1f;              // temperature modifier for buoyancy force computation

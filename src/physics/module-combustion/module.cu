@@ -268,7 +268,13 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float
     if (T_M > 150) // start of combustion
         changeOfEnergy = (c_bar * A_M * powf(T_M - T_sat, 3)) / (V_M * rho * c_M);
 
-    return /*diffusion + */temp_diff/* - changeOfEnergy*/;
+# if __CUDA_ARCH__>=200
+    if (diffusion + temp_diff - changeOfEnergy != 0.f) {
+        printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T);
+    }
+#endif
+
+    return diffusion + temp_diff - changeOfEnergy;
 }
 
 __device__ float rateOfWaterChange(float changeInMass)

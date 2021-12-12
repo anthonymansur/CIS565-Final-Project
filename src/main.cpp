@@ -247,6 +247,8 @@ void mainLoop(int NUM_OF_BRANCHES)
 
         runCUDA();
 
+        break;
+
         std::ostringstream ss;
         ss << "[";
         ss.precision(1);
