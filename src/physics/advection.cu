@@ -347,9 +347,9 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
 
     d_temp[k] = d_oldtemp[k] + (-dtm + dtD + dtC) * 2 * DELTA_T;
     # if __CUDA_ARCH__>=200
-    //if ( k == 2533 || d_temp[k] > 50.f) {
-    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
-    //}
+    if ( k == 2533 || d_temp[k] > 50.f) {
+        printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
+    }
     //if (lap[k] != 0.0f) {
     //    printf("lap[%d] = %f\n", k, lap[k]);
     //}

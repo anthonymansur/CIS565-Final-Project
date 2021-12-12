@@ -219,6 +219,8 @@ void Simulation::stepSimulation(float dt, int3 gridCount, float3 gridSize, float
     smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, sideLength, dev_oldtemp, dev_vel, dev_alpha_m, dev_smokedensity, 
         dev_oldsmokedensity, dev_deltaM);
 
+    printf("FINISH ITER\n");
+
     smokeRender(gridCount, gridSize, sideLength, gridDim, M_in, d_out, dev_smokedensity, dev_smokeRadiance, dev_oldtemp);
 
     HANDLE_ERROR(cudaPeekAtLastError());

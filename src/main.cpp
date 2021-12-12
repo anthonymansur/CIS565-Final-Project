@@ -321,14 +321,12 @@ void runCUDA()
     glUseProgram(program[PROG_fluid]);
     glBindVertexArray(VAO_smoke);
     totalTime += DT;
-
     GLuint location;
     if ((location = glGetUniformLocation(program[PROG_fluid], "u_time")) != -1) {
         glUniform1f(location, totalTime);
     }
     glBindVertexArray(0);
     glUseProgram(0);
-
     // cudaEventRecord(stop);
 
     // cudaEventSynchronize(stop);
