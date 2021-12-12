@@ -35,7 +35,7 @@ __device__ const float c_r = 250/*150*/;
 __device__ const float delta_m = 10e-3;
 
 /** TODO: add description */
-__device__ float lap_constant = 0.08f; // TODO: TUNE
+__device__ float lap_constant = 0.15f; // TODO: TUNE
 
 /**
  * @brief the ambient temperature of the modules
@@ -529,8 +529,8 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
 //#endif
 
 
-    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
-    //float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
+    //float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
+    float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
 
     module.temperature += deltaT;
 
@@ -559,13 +559,20 @@ __global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCel
         return;
 
     float deltaM = 0.f;
-    for (int i = gridModuleAdjs[gridCell.startModule].moduleInx; i <= gridModuleAdjs[gridCell.endModule].moduleInx; i++)
+    for (int i = gridCell.startModule; i <= gridCell.endModule; i++)
     {
+        int index = gridModuleAdjs[i].moduleInx;
         if (modules[i].deltaM < -MAX_DELTA_M || modules[i].deltaM > 0.f) {
             continue;
         }
-        deltaM += modules[i].deltaM;
+        deltaM += modules[index].deltaM;
     }
+//    # if __CUDA_ARCH__>=200
+//    if (gridCell.endModule - gridCell.startModule > 100) {
+//        printf("start = %d, end = %d\n", gridCell.startModule, gridCell.endModule);
+//    }
+//#endif
+
     gridOfMass[k] = deltaM;
 }
 
