@@ -57,14 +57,14 @@ const unsigned int PROG_branches = 2;
 const unsigned int PROG_fluid = 1;
 
 // Grid Dimensions
-int3 gridCount = { 24, 8, 24 };
-float3 gridSize = { 60.f, 20.f, 60.f };
+int3 gridCount = { 88, 8, 24 };
+float3 gridSize = { 220.f, 20.f, 60.f };
 float sideLength = 2.5f; // "blockSize"
 
 // gui variables
 static bool renderLeaves = false;
 static bool renderModuleTemp = true;
-static bool renderSmoke = false;
+static bool renderSmoke = true;
 
 static float totalTime = 0.f;
 
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 {
     projectName = "CIS-565 Final Project: Wildfire Simulation";
 
-    terrain.loadScene("../scenes/scene1.ply", gridCount.x, gridCount.y, gridCount.z, sideLength);
+    terrain.loadScene("../scenes/scene2.ply", gridCount.x, gridCount.y, gridCount.z, sideLength);
 
     std::cout << "Number of trees: " << terrain.numberOfTrees << std::endl;
     std::cout << "Number of modules: " << terrain.modules.size() << std::endl;

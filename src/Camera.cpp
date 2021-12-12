@@ -27,7 +27,7 @@ void Camera::updateCamera(GLuint* program, int size) {
 void Camera::UpdateOrbit(float deltaX, float deltaY, float deltaZ) {
 	theta += deltaX;
 	phi += deltaY;
-	r = glm::clamp(r - deltaZ, 1.0f, 50.0f);
+	r = glm::clamp(r - deltaZ, 1.0f, 100.0f);
 
 	float radTheta = glm::radians(theta);
 	float radPhi = glm::radians(phi);
