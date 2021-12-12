@@ -72,7 +72,7 @@ glm::vec4 coneCenterOfMass(glm::vec3 p0, glm::vec3 p1, float r0, float r1)
 
 	glm::vec3 pos = p0 + height * dir;
 
-	return glm::vec4(pos.x, pos.y, pos.z, coneMass(500, r0, r1, l));
+	return glm::vec4(pos.x, pos.y, pos.z, coneMass(660, r0, r1, l));
 }
 
 int t_flatten(const int i_x, const int i_y, const int i_z, int gridCount_x, int gridCount_y, int gridCount_z) {

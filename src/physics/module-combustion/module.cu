@@ -5,14 +5,68 @@
 /************
 * Constants *
 *************/
+// ---------------- TUNABLE ----------------
+/**
+ * @brief char contraction factor
+ * @note range: [0.5, 1.0], units: 1
+ * Tunable: inversely proportional to combustibility
+ */
+__device__ const float k = 0.75;
+
+/**
+ * @brief minimum value of c as a result of charring
+ * @note range: [0.0, 1.0], units: 1
+ * Tunable: directly proportional to combustibility
+ */
+__device__ const float c_min = 0.5;
+
+/**
+ * @brief the rate of insulation due to charring
+ * @note range: [50,250], units: 1 m^-1
+ * Tunable: directly proportional to combustibility
+ */
+__device__ const float c_r = 150;
+
+/**
+ * @brief Mass loss rate
+ * @note range: [0.01, 10.0] x 10^-3
+ * Tunable: directly proportional to combustibility
+ */
+__device__ const float delta_m = 10 * (0.001);
+
+/** TODO: add description */
+__device__ float lap_constant = 1.f; // TODO: TUNE
+
+/**
+ * @brief the ambient temperature of the modules
+ * @note units: celsius
+ * Tunable
+ */
+__device__ const float T_amb = 15.f; // TODO: move elsewhere?
+
+/**
+ * @brief Heat transfer coeff. for dry wood
+ * @note range: [0.03, 0.1], units: 1 s^-1
+ */ 
+#define B_DRY 0.03                           // TODO: TUNE
+__device__ const float b_dry = B_DRY; 
+
+/** TODO: add description */
+__device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
+__device__ const float MAX_DELTA_M = 100;// 0.0001;  // TODO: TUNE 
+__device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
+
+
+// TODO: talk about water
+
+// ---------------- NOT TUNABLE ----------------
 /**
  * @brief the temperatures used in combustion
  * @note min: 150, max: 450, units: celsius
+ * Not tunable
  */
 __device__ const float T0 = 150;
 __device__ const float T1 = 450;
-
-__device__ const float T_amb = 15.f; // TODO: move elsewhere?
 
 /**
  * @brief the saturation temperature of water
@@ -32,82 +86,47 @@ __device__ const float n_max = 2;
 __device__ const float u_ref = 15;
 
 /**
- * @brief char contraction factor
- * @note range: [0.5, 1.0], units: 1
- */
-__device__ const float k = 0.75;
-
-/**
- * @brief minimum value of c as a result of charring
- * @note range: [0.0, 1.0], units: 1
- */
-__device__ const float c_min = 0.5;
-
-/**
- * @brief the rate of insulation due to charring
- * @note range: [50,250], units: 1 m^-1
- */
-__device__ const float c_r = 150;
-
-/**
- * @brief the rate of insulation due to charring
+ * @brief used in the heat flux to water per unit area calculation
  * @note range: constant, units: 1 Wm^-2 celsius^-1
+ * Not tunable
  */
 __device__ const float c_bar = 0.1;
 
 /**
  * @brief Specific heat capacity of a module
  * @note range: constant, units: 1 kJ celsius^-1 kg
+ * Not tunable
  */
 __device__ const float c_M = 2.5;
 
 /**
  * @brief density of wood
  * @note units: 1 kg m^-3, deciduous = 660, conifer = 420, shrub = 300
+ * Not tunable
  */
-__device__ const float rho = 500; // WARNING: see note below.
-// NOTE: center of mass calculations currently assumes this to be equal to 500.
-
-/**
- * @brief Temperature diffusion coeff. (wood)
- * @note range: XXX, units: 1 m^2 s^-1
- */
-__device__ float alpha = 0.02; // TODO: first paper had different numbers?
+__device__ const float rho = 660; // WARNING: see note below.
+// NOTE: center of mass calculations currently assumes this to be equal to 660.
 
  /**
  * @brief Temperature diffusion coeff. (module)
  * @note range: XXX, units: 1 m^2 s^-1
+ * Not tunable
  */
 __device__ float alpha_M = 0.75;
-
-/** TODO: add description */
-__device__ float lap_constant = 0.85f; // TODO: TUNE
-
-/**
- * @brief Heat transfer coeff. for dry wood 
- * @note range: [0.03, 0.1], units: 1 s^-1
- */
-#define B_DRY 0.03
-__device__ const float b_dry = B_DRY; // TODO: TUNE
-
-__device__ const float rateMod = 0.1f;
 
 /**
  * @brief Heat transfer coeff. for wet wood 
  * @note range: 0.1 * b_dry, units: 1 s^-1
+ * Not tunable
  */
 __device__ const float b_wet = 0.1 * B_DRY;
 
 /**
  * @brief ratio of water released to wood burned
  * @note range: 0.5362 kg water per kg of wood
+ * Not tunable
  */
 __device__ const float c_WM = 0.5362;
-
-/** TODO: add description */
-__device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
-__device__ const float MAX_DELTA_M = 100;// 0.0001;  // TODO: TUNE 
-__device__ const float MAX_DELTA_T = 100;//0.001; // TODO: TUNE
 
 /*******************
 * Device Functions *
@@ -169,7 +188,7 @@ __device__ float rateOfMassChange(float mass, float H0, float H, float A0, float
     float k = computeReactionRate(temp, windSpeed);
 
     // TODO: verify this is correct, as it's throwing nan
-    return -rateMod * k * c * frontArea;
+    return -delta_m * k * c * frontArea;
 }
 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
