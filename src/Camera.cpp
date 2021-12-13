@@ -5,7 +5,7 @@ Camera::Camera(float aspectRatio) {
 	theta = 0.0f;
 	phi = 0.0f;
 	view = glm::lookAt(glm::vec3(0.0f, 1.0f, 10.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	proj = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+	proj = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
 	//proj[1][1] *= -1; // y-coordinate is flipped
 }
 
@@ -27,7 +27,7 @@ void Camera::updateCamera(GLuint* program, int size) {
 void Camera::UpdateOrbit(float deltaX, float deltaY, float deltaZ) {
 	theta += deltaX;
 	phi += deltaY;
-	r = glm::clamp(r - deltaZ, 1.0f, 50.0f);
+	r = glm::clamp(r - deltaZ, 1.0f, 100.0f);
 
 	float radTheta = glm::radians(theta);
 	float radPhi = glm::radians(phi);

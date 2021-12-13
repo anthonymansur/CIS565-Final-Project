@@ -22,7 +22,7 @@
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 #define DT 0.016 // in seconds
-#define BIG_SCENE 
+//#define BIG_SCENE 
 
 // variables
 const char* projectName;

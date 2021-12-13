@@ -197,5 +197,4 @@ void smokeRender(int3 gridCount, float3 gridSize, float blockSize, dim3 gridSize
     generateSmokeColorBuffer<<<gridSizeK, M_i>>>(gridCount, blockSize, d_out, d_smokedensity, d_smokeRadiance, d_temp);
     HANDLE_ERROR(cudaPeekAtLastError());
     HANDLE_ERROR(cudaDeviceSynchronize());
-
 }
