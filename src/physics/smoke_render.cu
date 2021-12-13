@@ -128,21 +128,9 @@ __global__ void generateSmokeColorBuffer(int3 gridCount, float blockSize, float*
     //const float intensity = d_smokeRadiance[k];
     float intensity = d_temp[k] / 300.f;
     float transparency = d_temp[k] / 300.f;
-    if (k_x < 14 && k_x > 12 &&
-        k_y < 8 && k_y > 0 &&
-        k_z < 14 && k_z > 12) {
-        intensity = 1.f;
-        transparency = 1.f;
-    }
-    else {
+    if (d_temp[k] < 75.f) {
         transparency = 0.f;
     }
-    //if (d_temp[k] > T_AMBIANT) {
-    //    transparency = 0.1f;
-    //}
-    //else {
-    //    transparency = 0.f;
-    //}
     
     //const unsigned char intensity = clip((int) (d_smoke[k]*255.f));
     unsigned int numPerQuad = 4 * (3 + 4); // 3 floats verts + 4 floats col
