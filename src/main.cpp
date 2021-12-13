@@ -28,8 +28,8 @@
 const char* projectName;
 std::string deviceName;
 GLFWwindow* window;
-int width = 1280;
-int height = 720;
+int width = 1280 * 1.5;
+int height = 720 * 1.5;
 
 Camera camera = Camera(width / (height * 1.f));
 Terrain terrain;
@@ -69,9 +69,10 @@ float3 gridSize = { 60.f, 20.f, 60.f };
 float sideLength = 2.5f; // "blockSize"
 
 // GUI variables
-static bool renderLeaves = false;
-static bool renderModuleTemp = true;
-static bool renderSmoke = false;
+static bool renderLeaves = true;
+static bool renderModuleTemp = false;
+static bool renderSmoke = true;
+static bool stepSim = true;
 
 // functions
 bool init(int argc, char** argv);
@@ -295,7 +296,7 @@ void runCUDA()
 
     // cudaEventRecord(start);
     // // What you want to time goes here
-    Simulation::stepSimulation(DT, gridCount, gridSize, sideLength, d_out);
+    if (stepSim) Simulation::stepSimulation(DT, gridCount, gridSize, sideLength, d_out);
 
     glUseProgram(program[PROG_fluid]);
     glBindVertexArray(VAO_smoke);
@@ -642,13 +643,16 @@ void errorCallback(int error, const char *description) {
     }
     if (key == GLFW_KEY_3 && action == GLFW_PRESS)
     {
-        std::cout << "entered" << std::endl;
         glUseProgram(program[PROG_fluid]);
         glBindVertexArray(VAO_smoke);
         renderSmoke = !renderSmoke;
         if ((location = glGetUniformLocation(program[PROG_fluid], "u_renderSmoke")) != -1) {
             glUniform1i(location, renderSmoke);
         }
+    }
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    {
+        stepSim = !stepSim;
     }
   }
 
