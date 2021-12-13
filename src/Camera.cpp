@@ -1,11 +1,11 @@
 #include "Camera.h"
 
 Camera::Camera(float aspectRatio) {
-	r = 10.0f;
+	r = 20.0f;
 	theta = 0.0f;
 	phi = 0.0f;
 	view = glm::lookAt(glm::vec3(0.0f, 1.0f, 10.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	proj = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+	proj = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
 	//proj[1][1] *= -1; // y-coordinate is flipped
 }
 
@@ -18,7 +18,7 @@ void Camera::updateCamera(GLuint* program, int size) {
 	for (int i = 0; i < size; i++)
 	{
 		glUseProgram(program[i]);
-		if ((location = glGetUniformLocation(*program, "u_projMatrix")) != -1) {
+		if ((location = glGetUniformLocation(program[i], "u_projMatrix")) != -1) {
 			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProj[0][0]);
 		}
 	}
@@ -27,7 +27,7 @@ void Camera::updateCamera(GLuint* program, int size) {
 void Camera::UpdateOrbit(float deltaX, float deltaY, float deltaZ) {
 	theta += deltaX;
 	phi += deltaY;
-	r = glm::clamp(r - deltaZ, 1.0f, 50.0f);
+	r = glm::clamp(r - deltaZ, 1.0f, 100.0f);
 
 	float radTheta = glm::radians(theta);
 	float radPhi = glm::radians(phi);
@@ -69,7 +69,7 @@ void Camera::mousePositionCallback(GLFWwindow* window, double xpos, double ypos,
 
 		previousX = xpos;
 		previousY = ypos;
-		updateCamera(program, 2);
+		updateCamera(program, 3);
 	}
 	else if (rightMousePressed) {
 		double deltaZ = static_cast<float>((previousY - ypos) * 0.05);
@@ -77,6 +77,6 @@ void Camera::mousePositionCallback(GLFWwindow* window, double xpos, double ypos,
 		UpdateOrbit(0.0f, 0.0f, deltaZ);
 
 		previousY = ypos;
-		updateCamera(program, 2);
+		updateCamera(program, 3);
 	}
 }

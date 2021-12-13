@@ -26,7 +26,6 @@ int blocksNeeded(int N_i, int M_i);
 __device__ int flatten(int3 gridCount, int col, int row, int z);
 __device__ int vflatten(int3 gridCount, int col, int row, int z);
 __device__ int flatten(int col, int row, int z, int width, int height, int depth);
-__device__ unsigned char clip(int n);
 
 __device__ float3 operator+(const float3& a, const float3& b);
 __device__ float3 operator-(const float3& a, const float3& b);
@@ -36,6 +35,8 @@ __device__ float3 operator*(const float& b, const float3& a);
 __global__ void resetKernelCentered(int3 gridCount, float* d_temp, float* d_oldtemp, float* d_smokedensity, float* d_oldsmokedensity);
 
 __global__ void resetKernelVelocity(int3 gridCount, float3* d_vel, float3* d_oldvel);
+
+__global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_temp);
 
 /**
 * @brief Computes contribution to velocity (wind speed) update due to turbulent forces

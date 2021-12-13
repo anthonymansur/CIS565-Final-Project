@@ -14,12 +14,12 @@ struct Node
 {
     // Node-specific parameters
     float radius; // starting radius of branch
-    glm::vec3 position; // the location of the node in world
-    
-    // Pointers
+    float startRadius; // radius before burning
+    glm::vec3 position; // the location of the node in grid space
     int previousEdge;
     int firstEdge; 
     int lastEdge;
+    bool leaf;
 };
 
 struct Edge
@@ -27,38 +27,50 @@ struct Edge
     // Edge-specific parameters
     float length;
     float radiiRatio;
-    glm::vec3 direction;
-
-    // Pointers
+    int moduleInx;
+    bool culled = false;
     int fromNode;
     int toNode;
 };
 
 struct Module
 {
-    // Module-specific parameters
+    int previousNode; // terminal node of previous module
+
+    int startNode; // root node of module
+    int lastNode; // the last node in the module's graph
+    int startEdge; 
+    int lastEdge; // may be a connection node
+    int startModule; // module edge pointer
+    int endModule; // module edge pointer
+    int parentModule; // pointer to parent module
+    int gridCell;
+    //int treeId; // id of the tree this module is associated with
+
+    // module-level parameters
     float temperature;
     float mass, deltaM; 
     glm::vec3 boundingMin, boundingMax; // Bounding box for the module 
+    glm::vec3 centerOfMass;
     float startArea; // lateral surface area before combustion
     float moduleConstant;
-    float waterContent;
+    //float waterContent;
 
-    // Pointers
-    // -- modules
-    int startModule;
-    int endModule;
-    // -- nodes
-    int previousNode; // terminal node of previous module
-    int startNode; // root node of module
-    int lastNode; // the last node in the module's graph
-    // -- edges
-    int startEdge; 
-    int lastEdge; // may be a connection node
-    // TODO: revisit this assumption about the pointer to last node as a module has many terminal nodes! 
+    bool culled = false;
 };
 
 struct ModuleEdge
+{
+    int moduleInx;
+};
+
+struct GridCell
+{
+    int startModule;
+    int endModule;
+};
+
+struct GridModuleAdj
 {
     int moduleInx;
 };

@@ -5,11 +5,13 @@
  */
 #include "advection.h"
 
+//#define DEBUG
+__device__ const float MAX_COOL = 0.1f * 200.f;
+__device__ const float MAX_DIFFUSION = 0.1f * 200.f;
+
 #define RAD 1 // radius of the stencil; helps to deal with "boundary conditions" at (thread) block's ends
 
 int blocksNeeded(int N_i, int M_i) { return (N_i + M_i - 1) / M_i; }
-
-__device__ unsigned char clip(int n) { return n > 255 ? 255 : (n < 0 ? 0 : n); }
 
 __device__ int idxClip(int idx, int idxMax) {
     return idx > (idxMax - 1) ? (idxMax - 1) : (idx < 0 ? 0 : idx);
@@ -176,12 +178,23 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
     if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
 
     const int k = flatten(gridCount, k_x, k_y, k_z);
-    if (d_abs(k_z - gridCount.x / 2) * d_abs(k_z - gridCount.x / 2) +
-        d_abs(k_y - gridCount.y / 2) * d_abs(k_y - gridCount.y / 2) +
-        d_abs(k_x - gridCount.z / 2) * d_abs(k_x - gridCount.z / 2) < gridCount.x * gridCount.x / (7 * 25)) {
+    if (k_x < 14 && k_x > 12 &&
+        k_y < 8 && k_y > 0 &&
+        k_z < 14 && k_z > 12) {
+#ifdef DEBUG
+# if __CUDA_ARCH__>=200
+        printf("k: %d\n", k);
+#endif 
+#endif
+        d_temp[k] = T_AMBIANT + 200.f;
         d_smokedensity[k] = 1.5;
-        d_temp[k] = T_AMBIANT + 100.f;
     }
+    // if (d_abs(k_z - gridCount.x / 2) * d_abs(k_z - gridCount.x / 2) +
+    //     d_abs(k_y - gridCount.y / 2) * d_abs(k_y - gridCount.y / 2) +
+    //     d_abs(k_x - gridCount.z / 2) * d_abs(k_x - gridCount.z / 2) < gridCount.x * gridCount.x / (7 * 25)) {
+    //     d_smokedensity[k] = 1.5;
+    //     d_temp[k] = T_AMBIANT + 100.f;
+    // }
 }
 
 __global__ void velocityKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, 
@@ -298,6 +311,13 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     // Backtracing 
     float3 estimated = pos - 2 * alpha_m;
 
+//
+//# if __CUDA_ARCH__>=200
+//    printf("Estimated = x: %f, y: %f, z: %f\n", estimated.x, estimated.y, estimated.z);
+//    printf("pos = x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
+//    printf("blockSize = %f\n", blockSize);
+//#endif 
+
     // Clipping
     if (estimated.x < blockSize) estimated.x = blockSize;
     if (estimated.y < blockSize) estimated.y = blockSize;
@@ -317,22 +337,36 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     if (estimated.y > gridSize.y - blockSize) estimated.y = gridSize.y - blockSize;
     if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
 
-    float dtR = TEMPERATURE_GAMMA * powf(scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT) - T_AMBIANT, 4);
+    // radiative cooling
+    float dtC = glm::clamp(TEMPERATURE_GAMMA * powf(d_oldtemp[k] - T_AMBIANT, 4), -MAX_COOL, 0.f);
+    if (d_oldtemp[k] < T_AMBIANT) dtC = 0.f; // if cooler than ambiant already shouldn't cool down
+    //float dtC = TEMPERATURE_GAMMA * powf(scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT) - T_AMBIANT, 4);
     lap[k] = laplacian(gridCount, blockSize, d_oldtemp, T_AMBIANT, k_x, k_y, k_z);
 
     __syncthreads();
 
-    dtR += TEMPERATURE_ALPHA * scalarLinearInt(gridCount, blockSize, lap, estimated, 0);
+    // diffusion component
+    float dtD = 100 * glm::clamp(TEMPERATURE_ALPHA * scalarLinearInt(gridCount, blockSize, lap, estimated, 0), -MAX_DIFFUSION, MAX_DIFFUSION);
 
     // mass contribution
     float dtm = TAU * d_deltaM[k];
 
-    d_temp[k] = -dtm + dt + dtR * 2 * DELTA_T;
-    //# if __CUDA_ARCH__>=200
-    //if (d_temp[k] != 20.f) 
-    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtR = %f\n", k, d_temp[k], dtm, dt, dtR);
-
-    //#endif 
+    d_temp[k] = d_oldtemp[k] + (-dtm + dtD + dtC) * 2 * DELTA_T;
+#ifdef DEBUG
+    # if __CUDA_ARCH__>=200
+    //if ( k == 2533 || d_temp[k] > 50.f) {
+    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
+    //}
+    //if (lap[k] != 0.0f) {
+    //    printf("lap[%d] = %f\n", k, lap[k]);
+    //}
+    //if (d_deltaM[k] != 0.f) {
+    //    printf("advection %f\n", d_deltaM[k]);
+    //}
+    //
+       
+    #endif 
+#endif
 }
 
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 
@@ -361,61 +395,16 @@ __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSi
     // Contribution to smoke density due to advection of fluid
     float ds = scalarLinearInt(gridCount, blockSize, d_oldsmoke, estimated, 0.f);
 
-    // Contribution to smoke density due to mass loss and evaporation
-    ds += (SMOKE_MASS * d_delta_m[k]) + (EVAP * SMOKE_WATER * d_delta_m[k]);
+    if (d_delta_m[k] > 0) d_delta_m[k] *= -1.0f;
+
+    // Contribution to smoke density due to mass loss and evaporation (d_delta_m is negative)
+    ds -= (SMOKE_MASS * d_delta_m[k]) + (EVAP * SMOKE_WATER * d_delta_m[k]);
 
     __syncthreads();
     d_smoke[k] = ds;
+    //d_smoke[k] += 0.1f;
 }
 
-//void kernelLauncher(
-//    int3 gridCount,
-//    float3 gridSize,
-//    float blockSize,
-//    float* d_temp,
-//    float* d_oldtemp,
-//    float3* d_vel,
-//    float3* d_oldvel,
-//    float* d_pressure,
-//    float3* d_ccvel,
-//    float3* d_vorticity,
-//    float* d_smokedensity,
-//    float* d_oldsmokedensity,
-//    float* d_smokeRadiance,
-//    float* d_deltaM,
-//    float3 externalForce,
-//    bool sourcesEnabled,
-//    int activeBuffer, dim3 Ld, BC bc, dim3 M_in, unsigned int slice) {
-//    const dim3 gridDim(blocksNeeded(Ld.x, M_in.x), blocksNeeded(Ld.y, M_in.y),
-//        blocksNeeded(Ld.z, M_in.z));
-//
-//    // CFD
-//    float* d_lap;
-//    float3* d_alpha_m;
-//    HANDLE_ERROR(cudaMalloc(&d_lap, gridCount.x * gridCount.y * gridCount.z * sizeof(float)));
-//    HANDLE_ERROR(cudaMalloc(&d_alpha_m, gridCount.x * gridCount.y * gridCount.z * sizeof(float3)));
-//
-//    computeVorticity << <gridDim, M_in >> > (gridCount, blockSize, d_vorticity, d_oldvel, d_ccvel);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//    velocityKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_oldtemp, d_vel, d_oldvel, d_alpha_m,
-//        d_oldsmokedensity, d_vorticity, externalForce);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    // Pressure Solve
-//    forceIncompressibility(gridCount, blockSize, d_vel, d_pressure);
-//
-//    tempAdvectionKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_temp, d_oldtemp, d_vel, d_alpha_m, d_lap, d_deltaM);
-//    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    smokeUpdateKernel << <gridDim, M_in >> > (gridCount, gridSize, blockSize, d_oldtemp, d_vel, d_alpha_m, d_smokedensity, d_oldsmokedensity, d_deltaM);
-//
-//    HANDLE_ERROR(cudaPeekAtLastError());
-//    HANDLE_ERROR(cudaDeviceSynchronize());
-//
-//    HANDLE_ERROR(cudaFree(d_alpha_m));
-//    HANDLE_ERROR(cudaFree(d_lap));
-//}
-//
 void initGridBuffers(
     int3 gridCount,
     float* d_temp,
@@ -440,5 +429,8 @@ void initGridBuffers(
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 
     resetPressure << <gridSizeC, M_in >> > (gridCount, d_pressure);
+    HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
+
+    sourceskernel<<<gridSizeC, M_in>>> (gridCount, d_oldsmokedensity, d_oldtemp);
     HANDLE_ERROR(cudaPeekAtLastError()); HANDLE_ERROR(cudaDeviceSynchronize());
 }

@@ -5,13 +5,69 @@
 /************
 * Constants *
 *************/
+// ---------------- TUNABLE ----------------
+/**
+ * @brief char contraction factor
+ * @note range: [0.5, 1.0], units: 1
+ * Tunable: inversely proportional to combustibility
+ */
+__device__ const float k = 0.75;
+
+/**
+ * @brief minimum value of c as a result of charring
+ * @note range: [0.0, 1.0], units: 1
+ * Tunable: directly proportional to combustibility
+ */
+__device__ const float c_min = 1/*0.5*/;
+
+/**
+ * @brief the rate of insulation due to charring
+ * @note range: [50,250], units: 1 m^-1
+ * Tunable: directly proportional to combustibility
+ */
+__device__ const float c_r = 250/*150*/;
+
+/**
+ * @brief Mass loss rate
+ * @note range: [0.01, 10.0] x 10^-3
+ * Tunable: directly proportional to combustibility
+ */
+__device__ const float delta_m = 10e-3;
+
+/** Scalar for the adjacenet module temperature diffusion term */
+__device__ float lap_constant = 0.15f; // TODO: TUNE
+
+/**
+ * @brief the ambient temperature of the modules
+ * @note units: celsius
+ * Tunable
+ */
+__device__ const float T_amb = 15.f; // TODO: move elsewhere?
+
+/**
+ * @brief Heat transfer coeff. for dry wood
+ * @note range: [0.03, 0.1], units: 1 s^-1
+ */ 
+#define B_DRY 0.1                           // TODO: TUNE
+__device__ const float b_dry = B_DRY; 
+
+/** Used to determine if module has no more mass */
+__device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
+
+/** Clamping values for change in mass and temperature of modules */
+__device__ const float MAX_DELTA_M = 0.1f;// 0.0001;  // TODO: TUNE 
+__device__ const float MAX_DELTA_T = 1000.f;//0.001; // TODO: TUNE
+__device__ const float MAX_MODULE_DIFFUSION = 0.1f;
+__device__ const float MAX_ENERGY_CHANGE = 0.1f;
+
+// ---------------- NOT TUNABLE ----------------
 /**
  * @brief the temperatures used in combustion
  * @note min: 150, max: 450, units: celsius
+ * Not tunable
  */
-__device__ const float T0 = 150, T1 = 450;
-
-__device__ const float T_amb = 15; // TODO: move elsewhere?
+__device__ const float T0 = 150;
+__device__ const float T1 = 450;
 
 /**
  * @brief the saturation temperature of water
@@ -31,69 +87,45 @@ __device__ const float n_max = 2;
 __device__ const float u_ref = 15;
 
 /**
- * @brief char contraction factor
- * @note range: [0.5, 1.0], units: 1
- */
-__device__ const float k = 0.75;
-
-/**
- * @brief minimum value of c as a result of charring
- * @note range: [0.0, 1.0], units: 1
- */
-__device__ const float c_min = 0.5;
-
-/**
- * @brief the rate of insulation due to charring
- * @note range: [50,250], units: 1 m^-1
- */
-__device__ const float c_r = 150;
-
-/**
- * @brief the rate of insulation due to charring
+ * @brief used in the heat flux to water per unit area calculation
  * @note range: constant, units: 1 Wm^-2 celsius^-1
+ * Not tunable
  */
 __device__ const float c_bar = 0.1;
 
 /**
  * @brief Specific heat capacity of a module
  * @note range: constant, units: 1 kJ celsius^-1 kg
+ * Not tunable
  */
 __device__ const float c_M = 2.5;
 
 /**
  * @brief density of wood
  * @note units: 1 kg m^-3, deciduous = 660, conifer = 420, shrub = 300
+ * Not tunable
  */
-__device__ const float rho = 500;
-
-/**
- * @brief Temperature diffusion coeff. (wood)
- * @note range: XXX, units: 1 m^2 s^-1
- */
- float alpha = 0.02; // TODO: first paper had different numbers?
+__device__ const float rho = 660; // WARNING: see note below.
+// NOTE: center of mass calculations currently assumes this to be equal to 660.
 
  /**
  * @brief Temperature diffusion coeff. (module)
  * @note range: XXX, units: 1 m^2 s^-1
+ * Not tunable
  */
- float alpha_M = 0.75;
-
-/**
- * @brief Heat transfer coeff. for dry wood 
- * @note range: [0.03, 0.1], units: 1 s^-1
- */
-#define B_DRY 0.06
-__device__ const float b_dry = B_DRY; 
+__device__ float alpha_M = 0.75;
 
 /**
  * @brief Heat transfer coeff. for wet wood 
  * @note range: 0.1 * b_dry, units: 1 s^-1
+ * Not tunable
  */
 __device__ const float b_wet = 0.1 * B_DRY;
 
 /**
  * @brief ratio of water released to wood burned
  * @note range: 0.5362 kg water per kg of wood
+ * Not tunable
  */
 __device__ const float c_WM = 0.5362;
 
@@ -102,7 +134,7 @@ __device__ const float c_WM = 0.5362;
 ********************/
 __device__ float sigmoid(float x)
 {
-    3 * x * x - 2 * x * x * x;
+    return 3 * x * x - 2 * x * x * x;
 }
 
 __device__ float getArea(float r0, float r1, float l)
@@ -150,19 +182,22 @@ __device__ float getFrontArea(float A0, float H0, float H)
     return A0 * H / H0;
 }
 
-__device__ float rateOfMassChange(float mass, float H0, float A0, float temp, float frontArea, float windSpeed)
+__device__ float rateOfMassChange(float mass, float H0, float H, float A0, float temp, float frontArea, float windSpeed)
 {
-    float H = heightOfPyrolyzingFront(H0, A0, mass);
     float H_c = charLayerThickness(H0, H);
     float c = charLayerInsulation(H_c);
     float k = computeReactionRate(temp, windSpeed);
-    return -1 * k * c * frontArea;
+
+    // TODO: verify this is correct, as it's throwing nan
+    return -delta_m * k * c * frontArea;
 }
 
-// TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 {
-    float moduleConstant = sqrt(3 / M_PI * rho);
+    /** Replace code with what's commented for simplier solution */
+    //Node& node = nodes[module.startNode];
+    //return node.radius / sqrt((3 / (M_PI * rho)) * module.mass);
+
     float sum = 0;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
@@ -170,66 +205,83 @@ __device__ float radiiModuleConstant(Node* nodes, Edge* edges, Module& module)
 
         Edge* edge = &edges[i]; // will be updated
         float l = edge->length;
+        float lambda = edge->radiiRatio;
         float prod = 1;
-        do
+
+        // check to see if fromNode isn't the root node
+        while (edge->fromNode != module.startNode)
         {
-            // For every edge in the path of the module's root node to the 
-            // edge's from node, traversing first from the edge's from node
-            // to the root node, do the following: 
+            // Need to traverse every edge in the path from root node to 
+            // the initial edge's fromNode. To do so, we will do the following
+            
+            // go to the current node's previous edge
+            int nodeInx = edge->fromNode;
+            edge = &edges[nodes[nodeInx].previousEdge];
 
-            float lambda = edge->radiiRatio;
-            prod *= (lambda * lambda) * (1 + lambda + lambda * lambda);
-
-            // get previous edge if not at the first edge
-            if (edge->fromNode != module.startNode)
-                edge = &edges[nodes[edge->fromNode].previousEdge];
-        } while (edge->fromNode != module.startNode);     
-
-        sum += l * prod;
+            // compute the product
+            float _lambda = edge->radiiRatio;
+            prod *= (_lambda * _lambda);
+        }
+        sum += l * prod * (1 + lambda + lambda * lambda);
     }
-
     return 1 / sqrt(sum);
 }
 
 __device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, float deltaMass)
 {
+    if (module.mass + deltaMass < FLT_EPSILON) return 0.f;
     return sqrt(3 / (M_PI * rho)) * radiiModuleConstant(nodes, edges, module) * sqrt(module.mass + deltaMass);
 }
 
-// TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius)
 {
+
+    if (rootRadius < FLT_EPSILON) return 0.f;
     int currNodeInx = nodeInx;
     Edge* edge; // will be updated
     float prod = 1;
     do
     {
-        // For every edge in the path of the module's root node to the 
-        // edge's from node, traversing first from the edge's from node
-        // to the root node, do the following: 
+        // Need to traverse every edge in the path from root node to 
+        // the node given. To do so, we will do the following
 
-        // TODO: use previous edge instead find the parent 
-        edge = &edges[nodes[currNodeInx].previousEdge]; 
-        prod *= edge->radiiRatio * rootRadius; 
-
-        // update currNode
+        // go to the current node's previous edge
+        Node& node = nodes[currNodeInx];
+        edge = &edges[node.previousEdge];
         currNodeInx = edge->fromNode;
-    } while (edge->fromNode != module.startNode); 
 
-    return prod;
+        // compute the product
+        prod *= edge->radiiRatio;
+    } while (currNodeInx != module.startNode);
+    return prod * rootRadius;
 }
 
-// TODO: diffusion of adjacent modules not yet correctlyimplemented
-__device__ float rateOfTemperatureChange(float T, float T_M, float T_adj, float W, float A_M, float V_M)
+__device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float W, float A_M, float V_M)
 {
     float b = (1 - W) * b_dry + W * b_wet;
-    float alpha = A_M * 0.001; // TODO: tuning
-    float diffusion = alpha * (T_adj - T); // TODO: implement diffusion. see eq. (30)
-    float temp_diff = b * (T - T_M);
+    float diffusion = alpha_M * T_diff; // TODO: implement diffusion. see eq. (30)
+    float temp_diff = glm::clamp(b * (T - T_M), -MAX_DELTA_T, MAX_DELTA_T);
     // TODO: add back change of energy
-    float changeOfEnergy = 0 /*(c_bar * A_M * powf((T_M - T_sat), 3)) / (V_M * rho * c_M)*/;
 
-    return diffusion + temp_diff - changeOfEnergy; 
+    float changeOfEnergy = 0;
+    if (T_M > 150 && V_M > 0.0001f) // TODO: change this
+        changeOfEnergy = glm::clamp((c_bar * A_M * powf(T_M - T_sat, 3)) / (V_M * rho * c_M), -MAX_ENERGY_CHANGE, MAX_ENERGY_CHANGE);
+# if __CUDA_ARCH__>=200
+    //if ((diffusion + temp_diff - changeOfEnergy) != (diffusion + temp_diff - changeOfEnergy)) {
+    //    printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f, alpha_M = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T, alpha_M);
+    //}
+    //if (abs(diffusion + temp_diff - changeOfEnergy) > 100.f) {
+    //    printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f, alpha_M = %f, A_M = %f, T_M = %f, V_M = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T, alpha_M, A_M, T_M, V_M);
+    //}
+#endif 
+
+//# if __CUDA_ARCH__>=200
+//    if (diffusion + temp_diff - changeOfEnergy != 0.f) {
+//        printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T);
+//    }
+//#endif
+
+    return diffusion + temp_diff - changeOfEnergy;
 }
 
 __device__ float rateOfWaterChange(float changeInMass)
@@ -237,31 +289,24 @@ __device__ float rateOfWaterChange(float changeInMass)
     return c_WM * changeInMass;
 }
 
-// NOTE: this is a very basic implementation. May need to be updated.
-__device__ glm::vec3 centerOfMass(Module& module)
-{
-    glm::vec3 center;
-    for (int i = 0; i < 3; i++)
-        center[i] = (module.boundingMax[i] + module.boundingMin[i]) * 0.5f;
-    return center;
-}
-
-// TODO: transfer these function calls to the fluid solver
+// Deprecated
 __device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.deltaM;
+    return -1;
+    //return (1 - glm::distance(x, module.centerOfMass) / dx) * module.deltaM;
 }
 
+// Deprecated
 __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    glm::vec3 center = centerOfMass(module);
-    return (1 - glm::distance(x, center) / dx) * module.waterContent;
+    return -1;
+    /*return (1 - glm::distance(x, module.centerOfMass) / dx) * module.waterContent;*/
 }
 
+// Deprecated
 __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
 {
-    bool intersects = true;
+    /*bool intersects = true;
     for (int i = 0; i < 3; i++)
     {
         if (pos[i] < module.boundingMin[i] || pos[i] > module.boundingMax[i])
@@ -270,20 +315,54 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
             break;
         }
     }
-    return intersects;
+    return intersects;*/
 }
 
 // TODO: add prototype to header file
-__device__ float getAdjacentModuleTemperatures(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
+__device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* moduleEdges, int moduleInx)
 {
     Module& module = modules[moduleInx];
-    float temp = 0.f;
-    for (int i = module.startModule; i <= module.endModule; i++)
+    float lap = 0.f;
+    int sum = 0;
+
+    // If module has no children or parent, return
+    if ((module.startModule < 0 || module.endModule < 0))
+        return 0.f; 
+
+
+    if (module.startModule >= 0 && module.endModule >= 0)
     {
-        Module& adj = modules[moduleEdges[i].moduleInx];
-        temp += adj.temperature;
+        // Go through all the children of the module
+        for (int i = module.startModule; i <= module.endModule; i++)
+        {
+            Module& adj = modules[moduleEdges[i].moduleInx];
+            if (adj.culled) continue;
+            float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
+            lap += (adj.temperature - module.temperature);// / (dist * dist);
+            //# if __CUDA_ARCH__>=200
+            //if (lap != 0.f) {
+            //    printf("%f\n", modules[3581].temperature);
+            //    printf("adj[%d] = %f, module[%d] = %f\n", moduleEdges[i].moduleInx, adj.temperature, moduleInx, module.temperature);
+            //}
+            //#endif
+            sum++;
+        }
     }
-    return temp / (module.endModule - module.startModule + 1);
+
+    if (module.parentModule >= 0)
+    {
+        // Go through the module's parent
+        Module& adj = modules[module.parentModule];
+        if (!adj.culled)
+        {
+            float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
+            lap += (adj.temperature - module.temperature) / (dist * dist);
+            sum++;
+        }
+    }
+    return glm::clamp(lap * lap_constant / sum, -MAX_MODULE_DIFFUSION, MAX_MODULE_DIFFUSION);
+
+    //return lap * lap_constant / sum;
 }
 
 /**********
@@ -296,8 +375,14 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     if (index >= N) return;
 
     Module& module = modules[index];
-    float area;
-    float mass;
+
+    if (module.startEdge < 0 || module.lastEdge < 0) {
+        module.culled = true;
+        return;
+    }
+
+    float area = 0.f;
+    float mass = 0.f;
     for (int i = module.startEdge; i <= module.lastEdge; i++)
     {
         // for every edge in the module
@@ -332,35 +417,54 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     module.boundingMin = minPos;
     module.boundingMax = maxPos;
 
-    module.deltaM = 0;
-    if (index == 1)
-        module.temperature = (T0 + T1) / 2; // set module 1 on fire
-    else
-        module.temperature = T_amb;
-    module.waterContent = 0;
+    module.deltaM = 0.f;
+    module.temperature = T_amb;
+
+    // primitive combustion
+    /*if (index < 4000)
+        module.temperature = 300;*/
+
+    //module.waterContent = 0.f;
 }
 
-__global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
+__global__ void kernInitIndices(int N, int* indices)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (index >= N) return;
 
+    indices[index] = index;
+}
+
+__global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 gridCount, float blockSize, Node* nodes, Edge* edges, Module* modules, ModuleEdge* moduleEdges, float* gridTemp)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    int moduleIndex = moduleIndices[index];
+
+    if (moduleIndex == -1) return;
+
     /** for each module in the forest */
-    Module& module = modules[index];
-    Node& rootNode = nodes[modules->startNode];
+    Module& module = modules[moduleIndex];
+    Node& rootNode = nodes[module.startNode];
+
+    // Module needs to be culled
+    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0 || module.culled) return;
 
     /** 1. update the mass */
     // calculate the current state of the module
-    float mass = 0;
+    float mass = 0.f;
     float area = 0;
     float temp = module.temperature;
+
     for (int i = module.startEdge; i <= module.lastEdge; i++)
-    {   
+    {
         // for every branch in the module
         Edge& edge = edges[i];
         Node& fromNode = nodes[edge.fromNode];
-        
+
         float r0 = fromNode.radius;
+
         float r1 = edge.radiiRatio * r0;
         float l = edge.length;
 
@@ -370,13 +474,33 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
     }
 
     // compute the change in mass
-    float H0 = rootNode.radius;
+    float H0 = rootNode.startRadius;
     float A0 = module.startArea;
     float H = heightOfPyrolyzingFront(H0, A0, mass);
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
-    float deltaM = rateOfMassChange(mass, H0, A0, temp, frontArea, windSpeed);
-    
+    float deltaM = glm::clamp(rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
+    # if __CUDA_ARCH__>=200
+    //float k = computeReactionRate(temp, windSpeed);
+    //if (!module.culled && k != 0.f ) {
+    //    printf("module[%d] = %f\n", moduleIndex, k);
+    //}
+    //if (k != k) {
+    //    printf("module[%d] is %s temp = %f, windSpeed = %f\n", moduleIndex, module.culled ? "culled" : "not culled", temp, windSpeed);
+    //}
+    //if (moduleIndex == 3770) {
+    //    printf("THIS IS THE GUY");
+    //    printf("%s\n", module.culled ? "culled\n" : "not culled\n");
+    //}
+#endif 
+
+    //float deltaM = rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed);
+    //if (deltaM != deltaM) deltaM = -0.001f;
+    /*if (moduleIndex < 12500 && module.temperature > 150)
+        deltaM = -0.0005f;
+    else
+        deltaM = 0.f;*/
+
     module.mass += deltaM;
     module.deltaM = deltaM;
 
@@ -393,22 +517,60 @@ __global__ void kernModuleCombustion(float DT, int N, int3 gridCount, float bloc
         node.radius = newRadius;
     }
 
-    // TODO: sync threads here?
+//# if __CUDA_ARCH__>=200
+//
+//    if (modules[moduleIndex].temperature != 15.0f || moduleIndex == 3581) {
+//        printf("module[%d]: %f\n", moduleIndex, modules[moduleIndex].temperature);
+//    }
+//#endif
 
     /** 3. Update temperature */
-    float T = getAverageValue(gridTemp, gridCount, blockSize, module.boundingMin, module.boundingMax);
-    float T_adj = getAdjacentModuleTemperatures(modules, moduleEdges, index);
+    float T_env = gridTemp[module.gridCell];
+    float T_diff = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
     float T_M = module.temperature;
     float W = 0; // TODO: get the water content
-    float A_M = area; 
+    float A_M = area; // lateral surface area 
     float V_M = module.mass / rho;
-    float deltaT = rateOfTemperatureChange(T, T_M, T_adj, W, A_M, V_M);
+
+//# if __CUDA_ARCH__>=200
+//
+//    if (modules[moduleIndex].temperature != 15.0f || moduleIndex == 3581) {
+//        printf("module[%d]: %f\n", moduleIndex, modules[moduleIndex].temperature);
+//    }
+//#endif
+
+//# if __CUDA_ARCH__>=200
+//    if (T_diff != 0.f) {
+//        printf("Module = %d, temp_diff = %f\n", moduleIndex, T_diff);
+//    }
+//#endif
+
+
+    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
+    //float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
+
+    # if __CUDA_ARCH__>=200
+
+    //if (deltaT != deltaT) {
+    //    printf("DELTAT module[%d]: %f\n", moduleIndex, deltaT);
+    //}
+#endif
 
     module.temperature += deltaT;
 
+# if __CUDA_ARCH__>=200
+    //if (moduleIndex == 3643) {
+    //    printf("TEMP module[%d]: %f\n", moduleIndex, module.temperature);
+    //}
+    ////printf("moduleIndex: %d\n", moduleIndex);
+    //if (module.temperature > 1000.f || module.temperature < -1000.f) {
+    //    printf("TEMP module[%d]: %f\n", moduleIndex, module.temperature);
+    //}
+#endif
+
     /** 4. Update released water content */
-    float deltaW = rateOfWaterChange(deltaM);
-    module.waterContent += deltaW;
+    /*float deltaW = rateOfWaterChange(deltaM);
+    module.waterContent += deltaW;*/
 }
 
 // TODO: these functions are duplicated in advection.h/.cpp
@@ -418,7 +580,7 @@ __device__ int m_idxClip(int idx, int idxMax) {
 __device__ int m_flatten(int col, int row, int z, int width, int height, int depth) {
     return m_idxClip(col, width) + m_idxClip(row, height) * width + m_idxClip(z, depth) * width * height;
 }
-__global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float blockSize, Module* modules, float* gridOfMass)
+__global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCell* gridCells, GridModuleAdj* gridModuleAdjs, float* gridOfMass)
 {
     const int k_x = threadIdx.x + blockDim.x * blockIdx.x;
     const int k_y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -426,57 +588,111 @@ __global__ void kernComputeChangeInMass(int3 gridCount, int numOfModules, float 
     if ((k_x >= gridCount.x) || (k_y >= gridCount.y) || (k_z >= gridCount.z)) return;
     const int k = m_flatten(k_x, k_y, k_z, gridCount.x, gridCount.y, gridCount.z);
 
-    float3 pos = make_float3((k_x + 0.5f) * blockSize, (k_y + 0.5f) * blockSize, (k_z + 0.5f) * blockSize);
-    // converting grid-space to terrain-space
-    glm::vec3 glmPos{ 0.f };
-    glmPos.x = pos.x - floor(gridCount.x * blockSize / 2);
-    glmPos.y = pos.y - floor(gridCount.y * blockSize / 2);
-    glmPos.z = pos.z - floor(gridCount.z * blockSize / 2);
+    GridCell& gridCell = gridCells[k];
+    if (gridCell.startModule < 0 || gridCell.endModule < 0)
+        return;
 
-    float deltaM = 0;
-    for (int i = 0; i < numOfModules; i++)
+    float deltaM = 0.f;
+    for (int i = gridCell.startModule; i <= gridCell.endModule; i++)
     {
-        if (checkModuleIntersection(modules[i], glmPos))
-            deltaM += getDeltaMassOfModuleAtPoint(modules[i], glmPos, blockSize);
+        int index = gridModuleAdjs[i].moduleInx;
+        if (modules[i].deltaM < -MAX_DELTA_M || modules[i].deltaM > 0.f) {
+            continue;
+        }
+        deltaM += modules[index].deltaM;
     }
+//    # if __CUDA_ARCH__>=200
+//    if (gridCell.endModule - gridCell.startModule > 100) {
+//        printf("start = %d, end = %d\n", gridCell.startModule, gridCell.endModule);
+//    }
+//#endif
+
     gridOfMass[k] = deltaM;
 }
 
-// TODO: may need to change implementation
-__device__ float getAverageValue(float* buffer, int3 gridCount, float blockSize, glm::vec3 min, glm::vec3 max)
+__device__ float getGridCell(Module& module, int3 gridCount, float blockSize)
 {
-    // convert terrain-space to grid-space coordinates // e.g. (-10,10) to (0, 20)
-    min.x += floor(gridCount.x * blockSize / 2);
-    min.y += floor(gridCount.y * blockSize / 2);
-    min.z += floor(gridCount.z * blockSize / 2);
-    max.x += floor(gridCount.x * blockSize / 2);
-    max.y += floor(gridCount.y * blockSize / 2);
-    max.z += floor(gridCount.z * blockSize / 2);
+    // Convert center of mass to grid-space coordinates // e.g. (-10,10) to (0, 20)
+    glm::vec3 com = module.centerOfMass;
+    com.x += floor(gridCount.x * blockSize / 2);
+    com.y += floor(gridCount.y * blockSize / 2);
+    com.z += floor(gridCount.z * blockSize / 2);
 
-    glm::vec3 minPoint, maxPoint;
-    for (int i = 0; i < 2; i++)
+    // get the grid at this location
+    for (int i = 0; i < 3; i++)
+        com[i] = blockSize * round(com[i] / blockSize);
+    int inx = m_flatten(com.x, com.y, com.z, gridCount.x, gridCount.y, gridCount.z);
+
+    return inx;
+}
+
+__device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gridCount, float blockSize)
+{
+    int inx = getGridCell(module, gridCount, blockSize);
+
+    return temp[inx];
+}
+
+__global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+    
+    int moduleInx = moduleIndices[index];
+    if (moduleInx < 0) return;
+
+    Module& module = modules[moduleInx];
+
+    // check if module needs to be culled
+    if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0)
     {
-        // get the min and max coord
-        minPoint[i] = blockSize * round(min[i] / blockSize); // TODO: is there a better way to do this?
-        maxPoint[i] = blockSize * round(max[i] / blockSize);
+        module.culled = true;
     }
+    # if __CUDA_ARCH__>=200
+    if (moduleInx == 5287 && module.culled) {
+        printf("culled 5287\n");
+    }
+#endif 
+}
 
-    // iterate over all the grid cells
-    float sum = 0.f;
-    int num = 0;
-    for (float i = minPoint.x; i <= maxPoint.x; i += blockSize)
+__global__ void kernCullModules2(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (index >= N) return;
+
+    int moduleInx = moduleIndices[index];
+    if (moduleInx < 0) return;
+
+    // check if culled or one of its parent modules has been culled
+    Module& module = modules[moduleInx];
+    Module* currModule = &modules[moduleInx];
+    while (currModule->parentModule >= 0 && !module.culled)
     {
-        for (float j = minPoint.y; j <= maxPoint.y; j += blockSize)
+        currModule = &modules[currModule->parentModule];
+        if (currModule->mass < MASS_EPSILON)
         {
-            for (float k = minPoint.z; k <= maxPoint.z; k += blockSize)
+            module.culled = true;
+            break;
+        }
+    }
+    if (module.culled)
+    {
+        moduleIndices[index] = -1; // cull the module
+
+        // reset module values
+        module.deltaM = 0.f;
+
+        // for every edge in the module, cull it so it isn't rendered
+        if (module.startEdge < 0 || module.lastEdge < 0) return;
+        for (int i = module.startEdge; i <= module.lastEdge; i++)
+        {
+            Edge& edge = edges[i];
+            edge.culled = true;
+            if (edge.fromNode >= 0 && edge.toNode >= 0)
             {
-                if ((i >= gridCount.x) || (j >= gridCount.y) || (k >= gridCount.z)) continue;
-                int inx = m_flatten(i, j, k, gridCount.x, gridCount.y, gridCount.z);
-                sum += buffer[inx];
-                num++;
+                nodes[edge.fromNode].radius = 0.f;
+                nodes[edge.toNode].radius = 0.f;
             }
         }
     }
-
-    return num > 0 ? (sum / num) : 0;
 }
