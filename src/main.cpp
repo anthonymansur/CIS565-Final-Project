@@ -21,8 +21,8 @@
 
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
-
 #define DT 0.016 // in seconds
+#define BIG_SCENE // WARNING: needs to be changed in advection.cu too
 
 // variables
 const char* projectName;
@@ -58,10 +58,14 @@ const unsigned int PROG_fluid = 1;
 
 static float totalTime = 0.f;
 
-
 // Grid Dimensions
+#ifdef BIG_SCENE
+int3 gridCount = { 88, 8, 24 };
+float3 gridSize = { 220.f, 20.f, 60.f };
+#else
 int3 gridCount = { 24, 8, 24 };
 float3 gridSize = { 60.f, 20.f, 60.f };
+#endif
 float sideLength = 2.5f; // "blockSize"
 
 // GUI variables
@@ -88,7 +92,11 @@ int main(int argc, char* argv[])
     
     // Load the scene on which to run simulation on
     // TODO: Need to make updates so that updating scene is seamless
+    #ifdef BIG_SCENE
+    terrain.loadScene("../scenes/scene2.ply", gridCount.x, gridCount.y, gridCount.z, sideLength);
+    #else
     terrain.loadScene("../scenes/scene1.ply", gridCount.x, gridCount.y, gridCount.z, sideLength);
+    #endif
 
     // Forest Details
     std::cout << "Number of trees: " << terrain.numberOfTrees << std::endl;
@@ -500,15 +508,21 @@ void initSmokeQuads() {
 void initVAO(int NUM_OF_BRANCHES) {
     
     /** Terrain */
-    float terrainSize = 25.f; // TODO: needs to be a function of terrain size from scene loading
+    #ifdef BIG_SCENE
+    float terrainSizeX = 110.f; // TODO: needs to be a function of terrain size from scene loading
+    float terrainSizeZ = 25.f; // TODO: needs to be a function of terrain size from scene loading
+    #else
+    float terrainSizeX = 25.f; // TODO: needs to be a function of terrain size from scene loading
+    float terrainSizeZ = 25.f; // TODO: needs to be a function of terrain size from scene loading
+    #endif
 
     // Includes vertices + texture coords
     GLfloat vertices[] =
     {
-        -terrainSize, 0.0f, -terrainSize,  -1.0f, -1.0f, // bottom left
-        -terrainSize, 0.0f, terrainSize, -1.0f, 1.0f, // top left
-        terrainSize, 0.f, terrainSize, 1.0f, 1.0f, // top right
-        terrainSize, 0.f, -terrainSize, 1.0f, -1.0f // bottom right
+        -terrainSizeX, 0.0f, -terrainSizeZ,  -1.0f, -1.0f, // bottom left
+        -terrainSizeX, 0.0f, terrainSizeZ, -1.0f, 1.0f, // top left
+        terrainSizeX, 0.f, terrainSizeZ, 1.0f, 1.0f, // top right
+        terrainSizeX, 0.f, -terrainSizeZ, 1.0f, -1.0f // bottom right
     };
 
     GLushort indices[] =

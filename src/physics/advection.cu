@@ -5,6 +5,8 @@
  */
 #include "advection.h"
 
+//#define DEBUG
+
 #define RAD 1 // radius of the stencil; helps to deal with "boundary conditions" at (thread) block's ends
 
 int blocksNeeded(int N_i, int M_i) { return (N_i + M_i - 1) / M_i; }
@@ -177,9 +179,11 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
     if (k_x < 14 && k_x > 12 &&
         k_y < 8 && k_y > 0 &&
         k_z < 14 && k_z > 12) {
-        # if __CUDA_ARCH__>=200
+#ifdef DEBUG
+# if __CUDA_ARCH__>=200
         printf("k: %d\n", k);
 #endif 
+#endif
         d_temp[k] = T_AMBIANT + 200.f;
         d_smokedensity[k] = 1.5;
     }
@@ -346,6 +350,7 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     float dtm = TAU * d_deltaM[k];
 
     d_temp[k] = d_oldtemp[k] + (-dtm + dtD + dtC) * 2 * DELTA_T;
+#ifdef DEBUG
     # if __CUDA_ARCH__>=200
     if ( k == 2533 || d_temp[k] > 50.f) {
         printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
@@ -359,6 +364,7 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     //
        
     #endif 
+#endif
 }
 
 __global__ void smokeUpdateKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, float3* d_alpha_m, 

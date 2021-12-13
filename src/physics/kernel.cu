@@ -10,6 +10,7 @@
 *****************/
 
 #define blockSize 128
+//#define DEBUG
 
 /***********************************************
 * Kernel state (pointers are device pointers) *
