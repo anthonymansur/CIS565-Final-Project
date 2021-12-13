@@ -6,6 +6,8 @@
 #include "advection.h"
 
 //#define DEBUG
+__device__ const float MAX_COOL = 0.1f * 200.f;
+__device__ const float MAX_DIFFUSION = 0.1f * 200.f;
 
 #define RAD 1 // radius of the stencil; helps to deal with "boundary conditions" at (thread) block's ends
 
@@ -336,7 +338,7 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     if (estimated.z > gridSize.z - blockSize) estimated.z = gridSize.z - blockSize;
 
     // radiative cooling
-    float dtC = TEMPERATURE_GAMMA * powf(d_oldtemp[k] - T_AMBIANT, 4);
+    float dtC = glm::clamp(TEMPERATURE_GAMMA * powf(d_oldtemp[k] - T_AMBIANT, 4), -MAX_COOL, 0.f);
     if (d_oldtemp[k] < T_AMBIANT) dtC = 0.f; // if cooler than ambiant already shouldn't cool down
     //float dtC = TEMPERATURE_GAMMA * powf(scalarLinearInt(gridCount, blockSize, d_oldtemp, estimated, T_AMBIANT) - T_AMBIANT, 4);
     lap[k] = laplacian(gridCount, blockSize, d_oldtemp, T_AMBIANT, k_x, k_y, k_z);
@@ -344,7 +346,7 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     __syncthreads();
 
     // diffusion component
-    float dtD = TEMPERATURE_ALPHA * scalarLinearInt(gridCount, blockSize, lap, estimated, 0);
+    float dtD = 100 * glm::clamp(TEMPERATURE_ALPHA * scalarLinearInt(gridCount, blockSize, lap, estimated, 0), -MAX_DIFFUSION, MAX_DIFFUSION);
 
     // mass contribution
     float dtm = TAU * d_deltaM[k];
@@ -352,9 +354,9 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     d_temp[k] = d_oldtemp[k] + (-dtm + dtD + dtC) * 2 * DELTA_T;
 #ifdef DEBUG
     # if __CUDA_ARCH__>=200
-    if ( k == 2533 || d_temp[k] > 50.f) {
-        printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
-    }
+    //if ( k == 2533 || d_temp[k] > 50.f) {
+    //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
+    //}
     //if (lap[k] != 0.0f) {
     //    printf("lap[%d] = %f\n", k, lap[k]);
     //}
