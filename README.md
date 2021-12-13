@@ -6,7 +6,7 @@ by [Anthony Mansur](https://www.linkedin.com/in/anthony-mansur-ab3719125/), [Ste
 ## Project Overview
 Adapted from: [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
 
-![Forest Render GIF](images/wildfire1.gif)
+![Forest Render GIF](images/Wildfire1.gif)
 
 ## Introduction
 
