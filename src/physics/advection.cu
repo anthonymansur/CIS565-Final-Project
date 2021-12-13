@@ -189,12 +189,6 @@ __global__ void sourceskernel(int3 gridCount, float* d_smokedensity, float* d_te
         d_temp[k] = T_AMBIANT + 200.f;
         d_smokedensity[k] = 1.5;
     }
-    // if (d_abs(k_z - gridCount.x / 2) * d_abs(k_z - gridCount.x / 2) +
-    //     d_abs(k_y - gridCount.y / 2) * d_abs(k_y - gridCount.y / 2) +
-    //     d_abs(k_x - gridCount.z / 2) * d_abs(k_x - gridCount.z / 2) < gridCount.x * gridCount.x / (7 * 25)) {
-    //     d_smokedensity[k] = 1.5;
-    //     d_temp[k] = T_AMBIANT + 100.f;
-    // }
 }
 
 __global__ void velocityKernel(int3 gridCount, float3 gridSize, float blockSize, float* d_temp, float3* d_vel, 
@@ -311,13 +305,6 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     // Backtracing 
     float3 estimated = pos - 2 * alpha_m;
 
-//
-//# if __CUDA_ARCH__>=200
-//    printf("Estimated = x: %f, y: %f, z: %f\n", estimated.x, estimated.y, estimated.z);
-//    printf("pos = x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
-//    printf("blockSize = %f\n", blockSize);
-//#endif 
-
     // Clipping
     if (estimated.x < blockSize) estimated.x = blockSize;
     if (estimated.y < blockSize) estimated.y = blockSize;
@@ -357,13 +344,6 @@ __global__ void tempAdvectionKernel(int3 gridCount, float3 gridSize, float block
     //if ( k == 2533 || d_temp[k] > 50.f) {
     //    printf("d_temp[%d] = %f, dtm = %f, dt = %f, dtc = %f, dtd = %f\n", k, d_temp[k], dtm, dt, dtC, dtD);
     //}
-    //if (lap[k] != 0.0f) {
-    //    printf("lap[%d] = %f\n", k, lap[k]);
-    //}
-    //if (d_deltaM[k] != 0.f) {
-    //    printf("advection %f\n", d_deltaM[k]);
-    //}
-    //
        
     #endif 
 #endif

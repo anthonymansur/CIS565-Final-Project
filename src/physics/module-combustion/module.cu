@@ -339,12 +339,6 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
             if (adj.culled) continue;
             float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
             lap += (adj.temperature - module.temperature);// / (dist * dist);
-            //# if __CUDA_ARCH__>=200
-            //if (lap != 0.f) {
-            //    printf("%f\n", modules[3581].temperature);
-            //    printf("adj[%d] = %f, module[%d] = %f\n", moduleEdges[i].moduleInx, adj.temperature, moduleInx, module.temperature);
-            //}
-            //#endif
             sum++;
         }
     }
@@ -361,8 +355,6 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
         }
     }
     return glm::clamp(lap * lap_constant / sum, -MAX_MODULE_DIFFUSION, MAX_MODULE_DIFFUSION);
-
-    //return lap * lap_constant / sum;
 }
 
 /**********
@@ -480,19 +472,6 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
     float deltaM = glm::clamp(rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
-    # if __CUDA_ARCH__>=200
-    //float k = computeReactionRate(temp, windSpeed);
-    //if (!module.culled && k != 0.f ) {
-    //    printf("module[%d] = %f\n", moduleIndex, k);
-    //}
-    //if (k != k) {
-    //    printf("module[%d] is %s temp = %f, windSpeed = %f\n", moduleIndex, module.culled ? "culled" : "not culled", temp, windSpeed);
-    //}
-    //if (moduleIndex == 3770) {
-    //    printf("THIS IS THE GUY");
-    //    printf("%s\n", module.culled ? "culled\n" : "not culled\n");
-    //}
-#endif 
 
     //float deltaM = rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed);
     //if (deltaM != deltaM) deltaM = -0.001f;
@@ -517,13 +496,6 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
         node.radius = newRadius;
     }
 
-//# if __CUDA_ARCH__>=200
-//
-//    if (modules[moduleIndex].temperature != 15.0f || moduleIndex == 3581) {
-//        printf("module[%d]: %f\n", moduleIndex, modules[moduleIndex].temperature);
-//    }
-//#endif
-
     /** 3. Update temperature */
     float T_env = gridTemp[module.gridCell];
     float T_diff = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
@@ -532,41 +504,10 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float A_M = area; // lateral surface area 
     float V_M = module.mass / rho;
 
-//# if __CUDA_ARCH__>=200
-//
-//    if (modules[moduleIndex].temperature != 15.0f || moduleIndex == 3581) {
-//        printf("module[%d]: %f\n", moduleIndex, modules[moduleIndex].temperature);
-//    }
-//#endif
-
-//# if __CUDA_ARCH__>=200
-//    if (T_diff != 0.f) {
-//        printf("Module = %d, temp_diff = %f\n", moduleIndex, T_diff);
-//    }
-//#endif
-
 
     float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
-    //float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
-
-    # if __CUDA_ARCH__>=200
-
-    //if (deltaT != deltaT) {
-    //    printf("DELTAT module[%d]: %f\n", moduleIndex, deltaT);
-    //}
-#endif
 
     module.temperature += deltaT;
-
-# if __CUDA_ARCH__>=200
-    //if (moduleIndex == 3643) {
-    //    printf("TEMP module[%d]: %f\n", moduleIndex, module.temperature);
-    //}
-    ////printf("moduleIndex: %d\n", moduleIndex);
-    //if (module.temperature > 1000.f || module.temperature < -1000.f) {
-    //    printf("TEMP module[%d]: %f\n", moduleIndex, module.temperature);
-    //}
-#endif
 
     /** 4. Update released water content */
     /*float deltaW = rateOfWaterChange(deltaM);
@@ -601,12 +542,6 @@ __global__ void kernComputeChangeInMass(int3 gridCount, Module* modules, GridCel
         }
         deltaM += modules[index].deltaM;
     }
-//    # if __CUDA_ARCH__>=200
-//    if (gridCell.endModule - gridCell.startModule > 100) {
-//        printf("start = %d, end = %d\n", gridCell.startModule, gridCell.endModule);
-//    }
-//#endif
-
     gridOfMass[k] = deltaM;
 }
 
@@ -648,11 +583,6 @@ __global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, Mod
     {
         module.culled = true;
     }
-    # if __CUDA_ARCH__>=200
-    if (moduleInx == 5287 && module.culled) {
-        printf("culled 5287\n");
-    }
-#endif 
 }
 
 __global__ void kernCullModules2(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
