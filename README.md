@@ -1,12 +1,12 @@
 # CIS565-Final-Project
 Final Group Project for CIS 565: GPU Programming
 
-by [Anthony Mansur](), [Stephen Lee](), and [Lindsay Smith]()
+by [Anthony Mansur](https://www.linkedin.com/in/anthony-mansur-ab3719125/), [Stephen Lee](https://www.linkedin.com/in/stephen-lee-bb5a40163/), and [Lindsay Smith](https://www.linkedin.com/in/lindsay-j-smith/)
 
 ## Project Overview
 Adapted from: [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
 
-![Forest Render GIF](images/basic-wildfire-demo-part1.gif)
+![Forest Render GIF](images/wildfire1.gif)
 
 ## Introduction
 
@@ -30,8 +30,6 @@ The way that this forest is represented for the simulation is through a set of b
 
 ### Module-Level Combustion
 
-[TODO: insert before and after render of a tree burnt]
-
 The simulation begins by iterating over all the modules in the forest. For every module:
 
 1. Update its mass if combusting based on its temperature
@@ -54,7 +52,13 @@ In order to render our branches we maintained a series of points corresponding t
 
 We also pass another vector into our shader pipeline that indicates whether there are leaves on a given branch. If a branch has leaves we generate a certain amount of randomness in the direction, length, color, and orientation of the leaves. This gives us a more realistic looking render with a wide variety of leaves. 
 
+![Forest Render](images/forest-render.jpg)
+
 ### Smoke and Fire
+
+To render our smoke and fire, we compute the a color and transparency value for each grid of our simulation and render square faces using those values. The contribution due to smoke is computed using a ray-marching approach, where we first march rays from a light source through the grid to compute radiance values for each grid cell. We then do a second pass where we cast rays from the camera to accumlate these radiance values to shade our grid cells. We then add in a fire contribution term that linearly adds red to the grid cell based on the grid cell's temperature. Here's a sample image of what this looks like in our simulation:
+
+![Fire](images/fire.PNG)
 
 ## References
 * [Base code](https://github.com/art049/InteractiveWoodCombustion) for fluid solver by Pirk et al.
