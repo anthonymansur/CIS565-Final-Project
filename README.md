@@ -1,4 +1,4 @@
-# CIS565-Final-Project
+# Wildfire Simulation and Rendering
 Final Group Project for CIS 565: GPU Programming
 
 by [Anthony Mansur](https://www.linkedin.com/in/anthony-mansur-ab3719125/), [Stephen Lee](https://www.linkedin.com/in/stephen-lee-bb5a40163/), and [Lindsay Smith](https://www.linkedin.com/in/lindsay-j-smith/)
