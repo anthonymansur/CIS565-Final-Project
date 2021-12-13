@@ -6,7 +6,7 @@ by [Anthony Mansur](https://www.linkedin.com/in/anthony-mansur-ab3719125/), [Ste
 ## Project Overview
 Adapted from: [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
 
-![Forest Render GIF](images/wildfire1.gif)
+![Forest Render GIF](images/Wildfire1.gif)
 
 ## Introduction
 
@@ -55,12 +55,23 @@ We also pass another vector into our shader pipeline that indicates whether ther
 ![Forest Render](images/forest-render.jpg)
 
 ### Smoke and Fire
-
 To render our smoke and fire, we compute the a color and transparency value for each grid of our simulation and render square faces using those values. The contribution due to smoke is computed using a ray-marching approach, where we first march rays from a light source through the grid to compute radiance values for each grid cell. We then do a second pass where we cast rays from the camera to accumlate these radiance values to shade our grid cells. We then add in a fire contribution term that linearly adds red to the grid cell based on the grid cell's temperature. Here's a sample image of what this looks like in our simulation:
 
 ![Fire](images/fire.PNG)
 
+## Performance Analysis
+
+Our simulation with a scene with 25,589 modules (see appendix) took on average 272 fps to run. As we can see by the diagram below, as trees were combusted and culled from the simulation, we noticed a slight increase in our frames per second.
+
+![FPS Overview](images/fps.jpg)
+
+For the larger scene with 204,690 modules, our frames per second was around 30 fps. This shows that a scene with about 10 times as many modules will take about 10 times longer to render a frame. I.e., our performance is directly tied to the number of modules in our forest.
+
+*Tested on: Windows 10, AMD Ryzen 5 3600, Geforce RTX 2060 Super (personal)*
+
+
 ## References
+
 * [Base code](https://github.com/art049/InteractiveWoodCombustion) for fluid solver by Pirk et al.
 * [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
 * [Synthetic Silviculture: Multi-scale Modeling of Plant Ecosystems](https://dl.acm.org/doi/pdf/10.1145/3306346.3323039)
@@ -121,7 +132,7 @@ To cull modules that have been burned away, we do not remove them from the four 
 To run the simulation, we used two scenes given to use by the researchers of the primary paper we referenced. The details of the scenes are described below:
 
 - Scene 1
-  - Num. of trees: 336
+  - Num. of trees: 269
   - Num. of modules: 25,589
   - Num. of branches: 192,085
   - Ecosystem Size: 50 by 50
