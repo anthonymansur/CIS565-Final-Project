@@ -56,7 +56,18 @@ We also pass another vector into our shader pipeline that indicates whether ther
 
 ### Smoke and Fire
 
+## Performance Analysis
+
+Our simulation with a scene with 25,589 modules (see appendix) took on average 272 fps to run. As we can see by the diagram below, as trees were combusted and culled from the simulation, we noticed a slight increase in our frames per second.
+
+![FPS Overview](images/fps.jpg)
+
+For the larger scene with 204,690 modules, our frames per second was around 30 fps. This shows that a scene with about 10 times as many modules will take about 10 times longer to render a frame. I.e., our performance is directly tied to the number of modules in our forest.
+
+*Tested on: Windows 10, AMD Ryzen 5 3600, Geforce RTX 2060 Super (personal)*
+
 ## References
+
 * [Base code](https://github.com/art049/InteractiveWoodCombustion) for fluid solver by Pirk et al.
 * [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
 * [Synthetic Silviculture: Multi-scale Modeling of Plant Ecosystems](https://dl.acm.org/doi/pdf/10.1145/3306346.3323039)
@@ -117,7 +128,7 @@ To cull modules that have been burned away, we do not remove them from the four 
 To run the simulation, we used two scenes given to use by the researchers of the primary paper we referenced. The details of the scenes are described below:
 
 - Scene 1
-  - Num. of trees: 336
+  - Num. of trees: 269
   - Num. of modules: 25,589
   - Num. of branches: 192,085
   - Ecosystem Size: 50 by 50

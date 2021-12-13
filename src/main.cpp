@@ -12,6 +12,9 @@
 #include <cuda_gl_interop.h>
 #include <glm/gtx/transform.hpp>
 #include <array>
+#include <iomanip>
+#include <iostream>
+#include <fstream>
 
 #include "utilityCore.hpp"
 #include "glslUtility.hpp"
@@ -22,7 +25,7 @@
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
 #define DT 0.016 // in seconds
-//#define BIG_SCENE 
+#define BIG_SCENE 
 
 // variables
 const char* projectName;
@@ -78,7 +81,7 @@ bool init(int argc, char** argv);
 void initShaders(GLuint* program);
 void initVAO(int NUM_OF_BRANCHES);
 void initSmokeQuads();
-void mainLoop(int NUM_OF_BRANCHES);
+void mainLoop(int NUM_OF_BRANCHES, std::ofstream& myfile);
 void runCUDA();
 
 void errorCallback(int error, const char* description);
@@ -111,8 +114,13 @@ int main(int argc, char* argv[])
         camera.updateCamera(program, 3);
         Simulation::initSimulation(&terrain, gridCount);
 
+        std::ofstream myfile;
+        myfile.open("../fps.txt");
+
         // Run main loop
-        mainLoop(terrain.edges.size());
+        mainLoop(terrain.edges.size(), myfile);
+
+        myfile.close();
 
         // Exit
         return 0;
@@ -204,7 +212,7 @@ bool init(int argc, char** argv)
     return true;
 }
 
-void mainLoop(int NUM_OF_BRANCHES)
+void mainLoop(int NUM_OF_BRANCHES, std::ofstream &myfile)
 {
     double fps = 0;
     double timebase = 0;
@@ -235,6 +243,8 @@ void mainLoop(int NUM_OF_BRANCHES)
         ss << std::fixed << fps;
         ss << " fps] " << deviceName;
         glfwSetWindowTitle(window, ss.str().c_str());
+
+        myfile << fps << std::endl;
 
         // GL commands go here for visualization
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black background
@@ -289,12 +299,12 @@ void runCUDA()
     cudaGLMapBufferObject((void**)&d_out, VBO_smoke);
 
     /** Timing analysis? */
-    // cudaEvent_t start, stop;
-    // cudaEventCreate(&start);
-    // cudaEventCreate(&stop);
+     //cudaEvent_t start, stop;
+     //cudaEventCreate(&start);
+     //cudaEventCreate(&stop);
 
-    // cudaEventRecord(start);
-    // // What you want to time goes here
+     //cudaEventRecord(start);
+     // What you want to time goes here
     Simulation::stepSimulation(DT, gridCount, gridSize, sideLength, d_out);
 
     glUseProgram(program[PROG_fluid]);
@@ -306,13 +316,13 @@ void runCUDA()
     }
     glBindVertexArray(0);
     glUseProgram(0);
-    // cudaEventRecord(stop);
+     //cudaEventRecord(stop);
 
-    // cudaEventSynchronize(stop);
-    // float milliseconds = 0.f;
-    // cudaEventElapsedTime(&milliseconds, start, stop);
+     //cudaEventSynchronize(stop);
+     //float milliseconds = 0.f;
+     //cudaEventElapsedTime(&milliseconds, start, stop);
     
-    // std::cout << "FPS: " << FIXED_FLOAT(1 / milliseconds) << std::endl;
+     //std::cout << "FPS: " << FIXED_FLOAT(1 / milliseconds) << std::endl;
 
     Simulation::copyBranchesToVBO(dptrBranches);
 
