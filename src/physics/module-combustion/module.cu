@@ -55,6 +55,10 @@ __device__ const float b_dry = B_DRY;
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
 __device__ const float MAX_DELTA_M = 0.1f;// 0.0001;  // TODO: TUNE 
 __device__ const float MAX_DELTA_T = 1000.f;//0.001; // TODO: TUNE
+__device__ const float MAX_MODULE_DIFFUSION = 0.1f;
+__device__ const float MAX_ENERGY_CHANGE = 0.1f;
+
+
 
 
 // TODO: talk about water
@@ -262,17 +266,20 @@ __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float
 {
     float b = (1 - W) * b_dry + W * b_wet;
     float diffusion = alpha_M * T_diff; // TODO: implement diffusion. see eq. (30)
-    float temp_diff = b * (T - T_M);
+    float temp_diff = glm::clamp(b * (T - T_M), -MAX_DELTA_T, MAX_DELTA_T);
     // TODO: add back change of energy
 
     float changeOfEnergy = 0;
-    if (T_M > 150) // start of combustion
-        changeOfEnergy = (c_bar * A_M * powf(T_M - T_sat, 3)) / (V_M * rho * c_M);
-//# if __CUDA_ARCH__>=200
-//    if (diffusion + temp_diff - changeOfEnergy != 0.f) {
-//        printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f, alpha_M = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T, alpha_M);
-//    }
-//#endif 
+    if (T_M > 150 && V_M > 0.0001f) // TODO: change this
+        changeOfEnergy = glm::clamp((c_bar * A_M * powf(T_M - T_sat, 3)) / (V_M * rho * c_M), -MAX_ENERGY_CHANGE, MAX_ENERGY_CHANGE);
+# if __CUDA_ARCH__>=200
+    //if ((diffusion + temp_diff - changeOfEnergy) != (diffusion + temp_diff - changeOfEnergy)) {
+    //    printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f, alpha_M = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T, alpha_M);
+    //}
+    //if (abs(diffusion + temp_diff - changeOfEnergy) > 100.f) {
+    //    printf("diffusion = %f, temp_diff = %f, changeOfEnergy = %f, T_M = %f, T_ENV = %f, alpha_M = %f, A_M = %f, T_M = %f, V_M = %f\n", diffusion, temp_diff, changeOfEnergy, T_M, T, alpha_M, A_M, T_M, V_M);
+    //}
+#endif 
 
 //# if __CUDA_ARCH__>=200
 //    if (diffusion + temp_diff - changeOfEnergy != 0.f) {
@@ -333,7 +340,7 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
             Module& adj = modules[moduleEdges[i].moduleInx];
             if (adj.culled) continue;
             float dist = glm::distance(module.centerOfMass, adj.centerOfMass);
-            lap += (adj.temperature - module.temperature) / (dist * dist);
+            lap += (adj.temperature - module.temperature);// / (dist * dist);
             //# if __CUDA_ARCH__>=200
             //if (lap != 0.f) {
             //    printf("%f\n", modules[3581].temperature);
@@ -355,7 +362,9 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
             sum++;
         }
     }
-    return lap * lap_constant / sum;
+    return glm::clamp(lap * lap_constant / sum, -MAX_MODULE_DIFFUSION, MAX_MODULE_DIFFUSION);
+
+    //return lap * lap_constant / sum;
 }
 
 /**********
@@ -475,6 +484,20 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     float frontArea = getFrontArea(A0, H0, H);
     float windSpeed = 0; // TODO: implement
     float deltaM = glm::clamp(rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed), -MAX_DELTA_M, 0.f);
+    # if __CUDA_ARCH__>=200
+    //float k = computeReactionRate(temp, windSpeed);
+    //if (!module.culled && k != 0.f ) {
+    //    printf("module[%d] = %f\n", moduleIndex, k);
+    //}
+    //if (k != k) {
+    //    printf("module[%d] is %s temp = %f, windSpeed = %f\n", moduleIndex, module.culled ? "culled" : "not culled", temp, windSpeed);
+    //}
+    //if (moduleIndex == 3770) {
+    //    printf("THIS IS THE GUY");
+    //    printf("%s\n", module.culled ? "culled\n" : "not culled\n");
+    //}
+#endif 
+
     //float deltaM = rateOfMassChange(mass, H0, H, A0, temp, frontArea, windSpeed);
     //if (deltaM != deltaM) deltaM = -0.001f;
     /*if (moduleIndex < 12500 && module.temperature > 150)
@@ -529,10 +552,27 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
 //#endif
 
 
-    //float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
-    float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
+    float deltaT = glm::clamp(rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M), -MAX_DELTA_T, MAX_DELTA_T);
+    //float deltaT = rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M);
+
+    # if __CUDA_ARCH__>=200
+
+    //if (deltaT != deltaT) {
+    //    printf("DELTAT module[%d]: %f\n", moduleIndex, deltaT);
+    //}
+#endif
 
     module.temperature += deltaT;
+
+# if __CUDA_ARCH__>=200
+    //if (moduleIndex == 3643) {
+    //    printf("TEMP module[%d]: %f\n", moduleIndex, module.temperature);
+    //}
+    ////printf("moduleIndex: %d\n", moduleIndex);
+    //if (module.temperature > 1000.f || module.temperature < -1000.f) {
+    //    printf("TEMP module[%d]: %f\n", moduleIndex, module.temperature);
+    //}
+#endif
 
     /** 4. Update released water content */
     float deltaW = rateOfWaterChange(deltaM);
