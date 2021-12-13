@@ -328,7 +328,7 @@ __device__ float getModuleTemperatureLaplacian(Module* modules, ModuleEdge* modu
     int sum = 0;
 
     // If module has no children or parent, return
-    if ((module.startModule < 0 || module.endModule < 0) && module.parentModule < 0)
+    if ((module.startModule < 0 || module.endModule < 0))
         return 0.f; 
 
 
