@@ -116,11 +116,6 @@ __global__ void jacobiIterations(int3 gridCount, float blockSize, float * d_pres
         d_oldpressure  = tmp;
     }
     d_pressure[k] = d_oldpressure[k];
-    //if(fabsf(k_z - GRID_COUNT/2) * fabsf(k_z - GRID_COUNT/2) + 
-    //   fabsf(k_y - GRID_COUNT/2) * fabsf(k_y - GRID_COUNT/2) +
-    //   fabsf(k_x - GRID_COUNT/2) * fabsf(k_x - GRID_COUNT/2) < GRID_COUNT  *GRID_COUNT / (5*5*25)){
-    //    printf("%f\n", d_pressure[k]);
-    //}
 }
 
 __global__ void resetPressure(int3 gridCount, float* d_pressure){
