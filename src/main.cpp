@@ -500,7 +500,7 @@ void initSmokeQuads() {
 void initVAO(int NUM_OF_BRANCHES) {
     
     /** Terrain */
-    float terrainSizeX = 25.f; // TODO: needs to be a function of terrain size from scene loading
+    float terrainSize = 25.f; // TODO: needs to be a function of terrain size from scene loading
 
     // Includes vertices + texture coords
     GLfloat vertices[] =

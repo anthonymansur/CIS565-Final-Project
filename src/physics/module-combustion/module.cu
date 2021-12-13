@@ -34,7 +34,7 @@ __device__ const float c_r = 250/*150*/;
  */
 __device__ const float delta_m = 10e-3;
 
-/** TODO: add description */
+/** Scalar for the adjacenet module temperature diffusion term */
 __device__ float lap_constant = 0.15f; // TODO: TUNE
 
 /**
@@ -51,13 +51,13 @@ __device__ const float T_amb = 15.f; // TODO: move elsewhere?
 #define B_DRY 0.1                           // TODO: TUNE
 __device__ const float b_dry = B_DRY; 
 
-/** TODO: add description */
+/** Used to determine if module has no more mass */
 __device__ const float MASS_EPSILON = FLT_EPSILON; // TODO: update
+
+
+/** Clamping values for change in mass and temperature of modules */
 __device__ const float MAX_DELTA_M = 0.1f;// 0.0001;  // TODO: TUNE 
 __device__ const float MAX_DELTA_T = 1000.f;//0.001; // TODO: TUNE
-
-
-// TODO: talk about water
 
 // ---------------- NOT TUNABLE ----------------
 /**
@@ -232,7 +232,6 @@ __device__ float radiiUpdateRootNode(Node* nodes, Edge* edges, Module& module, f
     return sqrt(3 / (M_PI * rho)) * radiiModuleConstant(nodes, edges, module) * sqrt(module.mass + deltaMass);
 }
 
-// TODO: verify this is correct before adding it to kernel! 
 __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int nodeInx, float rootRadius)
 {
 
@@ -256,14 +255,11 @@ __device__ float radiiUpdateNode(Node* nodes, Edge* edges, Module& module, int n
     return prod * rootRadius;
 }
 
-// TODO: diffusion of adjacent modules not yet correctlyimplemented
-//rateOfTemperatureChange(T_env, T_M, T_diff, W, A_M, V_M)
 __device__ float rateOfTemperatureChange(float T, float T_M, float T_diff, float W, float A_M, float V_M)
 {
-    float b = (1 - W) * b_dry + W * b_wet;
-    float diffusion = alpha_M * T_diff; // TODO: implement diffusion. see eq. (30)
+    float b = (1 - W) * b_dry + W * b_wet; 
+    float diffusion = alpha_M * T_diff; // Adjacent module diffusion  see eq. (30)
     float temp_diff = b * (T - T_M);
-    // TODO: add back change of energy
 
     float changeOfEnergy = 0;
     if (T_M > 150) // start of combustion
@@ -288,20 +284,24 @@ __device__ float rateOfWaterChange(float changeInMass)
     return c_WM * changeInMass;
 }
 
-// TODO: transfer these function calls to the fluid solver
+// Deprecated
 __device__ float getDeltaMassOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    return (1 - glm::distance(x, module.centerOfMass) / dx) * module.deltaM;
+    return -1;
+    //return (1 - glm::distance(x, module.centerOfMass) / dx) * module.deltaM;
 }
 
+// Deprecated
 __device__ float getWaterOfModuleAtPoint(Module& module, glm::vec3 x, float dx)
 {
-    return (1 - glm::distance(x, module.centerOfMass) / dx) * module.waterContent;
+    return -1;
+    /*return (1 - glm::distance(x, module.centerOfMass) / dx) * module.waterContent;*/
 }
 
+// Deprecated
 __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
 {
-    bool intersects = true;
+    /*bool intersects = true;
     for (int i = 0; i < 3; i++)
     {
         if (pos[i] < module.boundingMin[i] || pos[i] > module.boundingMax[i])
@@ -310,7 +310,7 @@ __device__ float checkModuleIntersection(Module& module, glm::vec3 pos)
             break;
         }
     }
-    return intersects;
+    return intersects;*/
 }
 
 // TODO: add prototype to header file
@@ -417,7 +417,7 @@ __global__ void kernInitModules(int N, Node* nodes, Edge* edges, Module* modules
     /*if (index < 4000)
         module.temperature = 300;*/
 
-    module.waterContent = 0.f;
+    //module.waterContent = 0.f;
 }
 
 __global__ void kernInitIndices(int N, int* indices)
@@ -440,8 +440,6 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     /** for each module in the forest */
     Module& module = modules[moduleIndex];
     Node& rootNode = nodes[module.startNode];
-
-    float oldMass = module.mass;
 
     // Module needs to be culled
     if (module.mass < MASS_EPSILON || module.startEdge < 0 || module.lastEdge < 0 || module.culled) return;
@@ -505,8 +503,6 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
 //    }
 //#endif
 
-    // TODO: sync threads here?
-
     /** 3. Update temperature */
     float T_env = gridTemp[module.gridCell];
     float T_diff = getModuleTemperatureLaplacian(modules, moduleEdges, moduleIndex);
@@ -535,8 +531,8 @@ __global__ void kernModuleCombustion(float DT, int N, int* moduleIndices, int3 g
     module.temperature += deltaT;
 
     /** 4. Update released water content */
-    float deltaW = rateOfWaterChange(deltaM);
-    module.waterContent += deltaW;
+    /*float deltaW = rateOfWaterChange(deltaM);
+    module.waterContent += deltaW;*/
 }
 
 // TODO: these functions are duplicated in advection.h/.cpp
@@ -599,7 +595,6 @@ __device__ float getEnvironmentTempAtModule(Module& module, float* temp, int3 gr
     return temp[inx];
 }
 
-// TODO: cull children of modules
 __global__ void kernCullModules1(int N, int* moduleIndices, Module* modules, ModuleEdge* moduleEdges, Node* nodes, Edge* edges)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;

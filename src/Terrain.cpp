@@ -228,7 +228,7 @@ bool Terrain::loadScene(std::string filename, int gx, int gy, int gz, float side
 			module.startModule = -1;
 			module.endModule = -1;
 			module.parentModule = -1;
-			module.treeId = treeId;
+			//module.treeId = treeId;
 
 			if (module.startNode == module.lastNode)
 				module.startEdge = module.lastEdge = -1.f;
