@@ -1,6 +1,6 @@
+// includes
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-// includes
 #include <iostream>
 #include <cstdlib>
 #include <string>
@@ -18,7 +18,6 @@
 #include "physics/kernel.h"
 #include "Camera.h"
 #include "Terrain.h"
-#include "Triangle.h"
 
 // definitions
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(2)<<(x) 
@@ -52,21 +51,23 @@ GLuint IBO_smoke;
 
 unsigned int texture;
 
+
 const unsigned int PROG_terrain = 0;
 const unsigned int PROG_branches = 2;
 const unsigned int PROG_fluid = 1;
+
+static float totalTime = 0.f;
+
 
 // Grid Dimensions
 int3 gridCount = { 24, 8, 24 };
 float3 gridSize = { 60.f, 20.f, 60.f };
 float sideLength = 2.5f; // "blockSize"
 
-// gui variables
+// GUI variables
 static bool renderLeaves = false;
 static bool renderModuleTemp = true;
 static bool renderSmoke = false;
-
-static float totalTime = 0.f;
 
 // functions
 bool init(int argc, char** argv);
@@ -84,56 +85,28 @@ void mousePosition(GLFWwindow* window, double xpos, double ypos);
 int main(int argc, char* argv[])
 {
     projectName = "CIS-565 Final Project: Wildfire Simulation";
-
+    
+    // Load the scene on which to run simulation on
+    // TODO: Need to make updates so that updating scene is seamless
     terrain.loadScene("../scenes/scene1.ply", gridCount.x, gridCount.y, gridCount.z, sideLength);
 
+    // Forest Details
     std::cout << "Number of trees: " << terrain.numberOfTrees << std::endl;
     std::cout << "Number of modules: " << terrain.modules.size() << std::endl;
     std::cout << "Number of branches: " << terrain.edges.size() << std::endl;
 
-    int esum = 0;
-    for (Edge edge : terrain.edges)
-    {
-        if (edge.moduleInx == -1)
-            esum++;
-    }
-    int nsum = 0;
-    int i = 0;
-    for (Node node : terrain.nodes)
-    {
-        if ((node.firstEdge == -1 || node.lastEdge == -1) && node.previousEdge == -1)
-        {
-            //std::cout << "Check node: " << i << std::endl;
-            nsum++;
-        }
-
-        i++;
-    }
-    int msum = 0;
-    i = 0;
-    for (Module module : terrain.modules)
-    {
-        if (module.parentModule == -1 && (module.startModule < 0 || module.endModule < 0))
-        {
-            if (msum < 5)
-                //std::cout << "Check module: " << i << std::endl;
-            msum++;
-        }
-        i++;
-    }
-    std::cout << "Number of edges with no modules: " << esum << std::endl;
-    std::cout << "Number of nodes with no connections: " << nsum << std::endl;
-    std::cout << "Number of modules w/ no connections: " << msum << std::endl;
-
-    //return 1;
-
+    // Attempt to initialize application with CUDA and OpenGL
     if (init(argc, argv))
     {        
+        // Initialize simulation
         camera.UpdateOrbit(0, -25, -15);
         camera.updateCamera(program, 3);
         Simulation::initSimulation(&terrain, gridCount);
-        // TODO: generate terrain
+
+        // Run main loop
         mainLoop(terrain.edges.size());
+
+        // Exit
         return 0;
     }
     else
@@ -167,8 +140,7 @@ bool init(int argc, char** argv)
     // Window setup
     glfwSetErrorCallback(errorCallback);
 
-    // TODO: customize cmake to include opengl 4.6. most likely have to switch from glew to glad
-    // Talk to Anthony for this
+    // May want to upgrade OpenGL in the future
     if (!glfwInit())
     {
         std::cout 
@@ -211,10 +183,10 @@ bool init(int argc, char** argv)
     cudaGLSetGLDevice(0);
 
     // register buffer objects here
-    // TODO: impelment
     cudaGLRegisterBufferObject(VBO_branches);
     cudaGLRegisterBufferObject(VBO_smoke);
 
+    // Initialize shaders
     initShaders(program);
 
     // GL enables go here 
@@ -245,8 +217,10 @@ void mainLoop(int NUM_OF_BRANCHES)
             frame = 0;
         }
 
+        // Run the simulation
         runCUDA();
 
+        // Update window title 
         std::ostringstream ss;
         ss << "[";
         ss.precision(1);
@@ -266,7 +240,6 @@ void mainLoop(int NUM_OF_BRANCHES)
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
         /** Draw branches */
-        // TODO: fix
         glUseProgram(program[PROG_branches]);
         glBindVertexArray(VAO_branches);
         glDrawArrays(GL_POINTS, 0, NUM_OF_BRANCHES);
@@ -356,8 +329,6 @@ void initShaders(GLuint* program) {
         "shaders/fluid.frag", attributeLocations_fluid, 2); // len of the attributeLocations_fluid
 
     glUseProgram(program[PROG_terrain]);
-
-    //glBindVertexArray(VAO);
 
     if ((location = glGetUniformLocation(program[PROG_terrain], "u_projMatrix")) != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &camera.viewProj[0][0]);
@@ -529,7 +500,9 @@ void initSmokeQuads() {
 void initVAO(int NUM_OF_BRANCHES) {
     
     /** Terrain */
-    float terrainSize = 25.f;
+    float terrainSizeX = 25.f; // TODO: needs to be a function of terrain size from scene loading
+
+    // Includes vertices + texture coords
     GLfloat vertices[] =
     {
         -terrainSize, 0.0f, -terrainSize,  -1.0f, -1.0f, // bottom left
@@ -537,14 +510,6 @@ void initVAO(int NUM_OF_BRANCHES) {
         terrainSize, 0.f, terrainSize, 1.0f, 1.0f, // top right
         terrainSize, 0.f, -terrainSize, 1.0f, -1.0f // bottom right
     };
-
-    //GLfloat texCoords[] = 
-    //{
-    //    -1.0f, 0.0f, -1.0f,
-    //    -1.0f, 0.0f, 1.0f,
-    //    1.0f, 0.0f, 1.0f,
-    //    1.0f, 0.0f, -1.0f
-    //};
 
     GLushort indices[] =
     {
@@ -595,6 +560,7 @@ void initVAO(int NUM_OF_BRANCHES) {
     /** Branches */
     std::unique_ptr<GLfloat[]> branches{ new GLfloat[11 * NUM_OF_BRANCHES] };
 
+    // This will be updated by the simulation in CUDA
     for (int i = 0; i < NUM_OF_BRANCHES; i++)
     {
         branches[11 * i + 0] = 0.0f;
@@ -613,7 +579,6 @@ void initVAO(int NUM_OF_BRANCHES) {
 
     glGenVertexArrays(1, &VAO_branches);
     glGenBuffers(1, &VBO_branches);
-    // TODO: indices?
 
     glBindVertexArray(VAO_branches);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_branches);
