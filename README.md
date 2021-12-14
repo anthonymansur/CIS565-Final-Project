@@ -1,15 +1,12 @@
 # Wildfire Simulation and Rendering
-Final Group Project for CIS 565: GPU Programming
-
-by [Anthony Mansur](https://www.linkedin.com/in/anthony-mansur-ab3719125/), [Stephen Lee](https://www.linkedin.com/in/stephen-lee-bb5a40163/), and [Lindsay Smith](https://www.linkedin.com/in/lindsay-j-smith/)
-
-## Project Overview
 Adapted from: [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
 
 ![Forest Render GIF](images/Wildfire1.gif)
 
-## Introduction
+By [Anthony Mansur](https://www.linkedin.com/in/anthony-mansur-ab3719125/), [Stephen Lee](https://www.linkedin.com/in/stephen-lee-bb5a40163/), and [Lindsay Smith](https://www.linkedin.com/in/lindsay-j-smith/)
 
+
+## Introduction
 As climate change continues to globally exacerbate droughts in dry places, medium to large scale wildfires have become common place during the hottest months of the year. Consequently learning how to predict the spread of wildfires to figure out the best ways to combat them has become increasingly important. 
 
 Physically-based models of wildfires have traditionally been inadequate in accurately simulating real-world behavior due to high computation costs leading to necessary compromises in fidelity. Recently, new [physically-based models](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf) have been developed that show promising potential to have a physically-accurate, interactable wildire simulation. This is done by abstracting the trees in a forest into modules that simplify computations while maintaining the geometric and spatial information necessary in maintaining an accurate simulation of fire spread. 
@@ -17,8 +14,10 @@ Physically-based models of wildfires have traditionally been inadequate in accur
 Our goal for this project was to build off of [this work](http://computationalsciences.org/publications/haedrich-2021-wildfires.html), creating a wildfire simulation of our own using C++/CUDA to leverage parallelization on the GPU and OpenGL to render our scenes.
 
 ## Forest Representation
+<p align="center">  <img height="300" src="images/tree-architecture.png" alt="Tree Architecture"></p>
+<p align="center">Image credit: Makowski et al.</p>
 
-<img src="images/tree-architecture.png" alt="Tree Architecture" style="zoom: 33%;" />
+<p></p>
 
 The combustion model used in this implementation is defined for individual branch modules, where each tree is defined as a collection of branch modules. These modules come from a [multi-scale method](https://dl.acm.org/doi/pdf/10.1145/3306346.3323039) to design large-scale ecosystems, in which they locally adapt as a result of their development and interaction with neighboring plants. 
 
@@ -38,10 +37,12 @@ The simulation begins by iterating over all the modules in the forest. For every
 4. Update the released water content based on the mass loss.
 5. Cull from the simulation if mass is zero.
 
+For the scene that we loaded, it took about **33 hours** to fully combust the forest (28,000 timesteps, each being 16 milliseconds).
+
 ## Translating to the Grid and Simulation Space
 Having implemented combustion at a module-level, the next step is to contextualize that combustion within the environment that that the modules exist. To do this, we have divided the simulation space into a grid of uniform cubes that are used to compute parameters necessary to model the spread of fire throughout the simulation as the fluid air advects and diffuses heat across the scene. We've summarized these computations that we make at a grid-level in the dependency graph below:
 
-![Fluid overview](images/fluid-overview.PNG)
+<p align="center">  <img height="350" src="images/fluid-overview.PNG" alt="Fluid overview"></p>
 
 At a high-level, we have discretized our simulation space into smaller quantities that we can use to approximate the flow of air, heat, and smoke throughout the scene, taking a Eulerian approach as opposed to a particle-based one. We can then map these smaller subsections of our simulation space to our modules by computing their center of mass and finding which grid cell contains it. This enables us to send necessary information between the modules and the grid cells that they exist within thoughout the lifetime of our simulation. We implemented kernels in CUDA to compute these quantities at each time step of our simulation, and we store them in buffers to render aspects of our scene such as smoke and fire, as well as send information back to the modules to compute combustion rate in the next time step.
 
@@ -61,9 +62,9 @@ To render our smoke and fire, we compute the a color and transparency value for 
 
 ## Performance Analysis
 
-Our simulation with a scene with 25,589 modules (see appendix) took on average 272 fps to run. As we can see by the diagram below, as trees were combusted and culled from the simulation, we noticed a slight increase in our frames per second.
+Our simulation with a scene with 25,589 modules (see appendix) took on average 272 fps to run. As we can see by the diagram below, as trees were combusted and culled from the simulation, we noticed a slight increase in our frames per second. 
 
-![FPS Overview](images/fps.jpg)
+<p align="center">  <img height="350" src="images/fps.jpg" alt="FPS Overview"></p>
 
 For the larger scene with 204,690 modules, our frames per second was around 30 fps. This shows that a scene with about 10 times as many modules will take about 10 times longer to render a frame. I.e., our performance is directly tied to the number of modules in our forest.
 
@@ -76,6 +77,8 @@ For the larger scene with 204,690 modules, our frames per second was around 30 f
 * [Fire in Paradise: Mesoscale Simulation of Wildfires](http://computationalsciences.org/publications/haedrich-2021-wildfires/haedrich-2021-wildfires.pdf)
 * [Synthetic Silviculture: Multi-scale Modeling of Plant Ecosystems](https://dl.acm.org/doi/pdf/10.1145/3306346.3323039)
 * [Accelerating large graphs algorithms on the GPU using CUDA](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.102.4206&rep=rep1&type=pdf)
+
+<p><br/></p>
 
 ## Appendix
 
